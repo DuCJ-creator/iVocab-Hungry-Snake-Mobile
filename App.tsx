@@ -271,7 +271,7 @@ function App() {
             <div className="bg-paper rounded-xl border-2 border-ink/10 shadow-inner p-2 flex flex-col items-center justify-center text-center overflow-hidden relative">
                 {currentWord ? (
                     <div className="flex flex-col items-center justify-center h-full">
-                        <div className="text-3xl md:text-5xl font-serif font-bold text-ink leading-tight break-words w-full px-1">
+                        <div className="text-2xl md:text-3xl lg:text-4xl font-serif font-bold text-ink leading-tight break-words w-full px-1">
                             {currentWord.word}
                         </div>
                         <div className="text-xs md:text-sm text-olive font-bold mt-2 bg-olive/10 px-2 py-0.5 rounded-full">

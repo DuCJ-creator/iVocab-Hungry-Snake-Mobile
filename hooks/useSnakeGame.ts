@@ -75,25 +75,21 @@ export const useSnakeGame = (isMuted: boolean = false) => {
   }, []);
 
   const generateFoods = (targetWord: WordItem, allWords: WordItem[], currentSnake: Point[]) => {
-    const options = [targetWord];
-    // Get 3 random wrong meanings
+    // 1. Prepare Distractors
+    // Get all words except target, map to meanings, unique them.
     const otherWords = allWords.filter(w => w.meaning !== targetWord.meaning);
     const uniqueMeanings = Array.from(new Set(otherWords.map(w => w.meaning)));
     
-    // Ensure we try to get 3 distractors
-    while (options.length < 4 && uniqueMeanings.length > 0) {
+    const distractors: string[] = [];
+    // Try to get up to 3 distractors
+    while (distractors.length < 3 && uniqueMeanings.length > 0) {
       const randomIndex = Math.floor(Math.random() * uniqueMeanings.length);
       const meaning = uniqueMeanings.splice(randomIndex, 1)[0];
-      options.push({ word: '', pos: '', meaning });
+      distractors.push(meaning);
     }
 
-    // Shuffle options
-    const shuffled = options.sort(() => 0.5 - Math.random());
-
-    // Place on grid avoiding snake
-    const newFoods: Food[] = [];
+    // 2. Find Empty Cells
     const snakeBodySet = new Set(currentSnake.map(p => `${p.x},${p.y}`));
-
     const emptyCells: Point[] = [];
     for(let y=0; y<GRID_SIZE; y++) {
         for(let x=0; x<GRID_SIZE; x++) {
@@ -103,19 +99,39 @@ export const useSnakeGame = (isMuted: boolean = false) => {
         }
     }
 
+    // Shuffle empty cells to ensure random positions
     for (let i = emptyCells.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [emptyCells[i], emptyCells[j]] = [emptyCells[j], emptyCells[i]];
     }
 
-    shuffled.forEach((opt, index) => {
-        if (index < emptyCells.length) {
-            const pos = emptyCells[index];
+    const newFoods: Food[] = [];
+
+    // 3. CRITICAL: Always place the CORRECT answer first if there is space
+    if (emptyCells.length > 0) {
+        const pos = emptyCells.pop()!;
+        newFoods.push({
+            x: pos.x,
+            y: pos.y,
+            meaning: targetWord.meaning,
+            correct: true
+        });
+    } else {
+        // No space at all? This usually means game over, 
+        // but we handle it gracefully by just not spawning food. 
+        // Game loop should handle collision/gameover separately.
+        return; 
+    }
+
+    // 4. Place Distractors in remaining spots
+    distractors.forEach(meaning => {
+        if (emptyCells.length > 0) {
+            const pos = emptyCells.pop()!;
             newFoods.push({
-                x: pos.x, 
+                x: pos.x,
                 y: pos.y,
-                meaning: opt.meaning,
-                correct: opt.meaning === targetWord.meaning
+                meaning: meaning,
+                correct: false
             });
         }
     });
