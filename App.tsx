@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useSnakeGame } from './hooks/useSnakeGame';
 import GameCanvas from './components/GameCanvas';
 import { GameState, WordItem } from './types';
-import { generateWordsWithGemini } from './services/geminiService';
 
 // Constants
 const GRID_SIZE = 12; 
@@ -35,7 +34,6 @@ function App() {
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
   const [selectedRange, setSelectedRange] = useState<number[] | null>(null);
   const [gameDuration, setGameDuration] = useState(10); // minutes
-  const [aiTopic, setAiTopic] = useState("");
 
   // Swipe handling
   const touchStart = useRef<{x: number, y: number} | null>(null);
@@ -129,24 +127,6 @@ function App() {
       alert(e.message);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleAiGenerate = async () => {
-    if (!aiTopic) return;
-    setIsLoading(true);
-    setLoadingMsg("Gemini is thinking...");
-    try {
-        const generated = await generateWordsWithGemini(aiTopic);
-        if (generated.length < 4) throw new Error("Not enough words generated.");
-        
-        setWords(generated);
-        setShowConfig(false);
-        startGame(gameDuration, generated);
-    } catch (e: any) {
-        alert("AI Generation failed: " + e.message);
-    } finally {
-        setIsLoading(false);
     }
   };
 
@@ -397,10 +377,10 @@ function App() {
 
                             {/* Mode Selection Tab */}
                             <div className="space-y-4">
-                                <h3 className="font-bold text-lg text-ink">Select Word Source</h3>
+                                <h3 className="font-bold text-lg text-ink">Select Vocabulary Source</h3>
                                 
                                 <div className="bg-white/50 p-4 rounded-xl border border-tan">
-                                    <div className="text-sm font-bold text-olive uppercase mb-2">Option 1: iVocab CSV</div>
+                                    <div className="text-sm font-bold text-olive uppercase mb-2">iVocab Level & Unit</div>
                                     <div className="flex flex-wrap gap-2 mb-2">
                                         {[1,2,3,4,5,6].map(l => (
                                             <button 
@@ -429,31 +409,6 @@ function App() {
                                         className="w-full mt-3 bg-ink text-white py-2 rounded-lg font-bold disabled:opacity-50 active:scale-95 transition-transform"
                                     >
                                         Load from CSV
-                                    </button>
-                                </div>
-
-                                <div className="relative text-center">
-                                    <span className="bg-paper px-2 text-tan text-sm">OR</span>
-                                </div>
-
-                                <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-4 rounded-xl border border-indigo-200">
-                                    <div className="text-sm font-bold text-indigo-500 uppercase mb-2 flex items-center gap-2">
-                                        <span>Option 2: Gemini AI</span>
-                                        <span className="text-[10px] bg-indigo-500 text-white px-1 rounded">NEW</span>
-                                    </div>
-                                    <input 
-                                        type="text" 
-                                        placeholder="Enter topic (e.g. 'Space', 'Fruit')"
-                                        value={aiTopic}
-                                        onChange={e => setAiTopic(e.target.value)}
-                                        className="w-full p-2 rounded border border-indigo-200 text-sm mb-2"
-                                    />
-                                    <button 
-                                        onClick={handleAiGenerate}
-                                        disabled={!aiTopic.trim()}
-                                        className="w-full bg-indigo-500 text-white py-2 rounded-lg font-bold disabled:opacity-50 hover:bg-indigo-600 transition-colors active:scale-95"
-                                    >
-                                        Generate with AI
                                     </button>
                                 </div>
                             </div>
