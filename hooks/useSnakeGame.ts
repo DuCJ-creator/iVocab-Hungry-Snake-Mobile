@@ -3,16 +3,23 @@ import { GameState, Point, Food, WordItem, ControlMode } from '../types';
 
 const GRID_SIZE = 12;
 
+interface RoundData {
+  word: WordItem | null;
+  foods: Food[];
+}
+
 export const useSnakeGame = (isMuted: boolean = false) => {
   const [gameState, setGameState] = useState<GameState>(GameState.IDLE);
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(600);
   const [words, setWords] = useState<WordItem[]>([]);
-  const [currentWord, setCurrentWord] = useState<WordItem | null>(null);
-  const [snake, setSnake] = useState<Point[]>([{ x: 5, y: 5 }]);
-  const [foods, setFoods] = useState<Food[]>([]);
   
-  // Mutable state
+  // Consolidate Word and Foods to prevent sync issues
+  const [currentRound, setCurrentRound] = useState<RoundData>({ word: null, foods: [] });
+  
+  const [snake, setSnake] = useState<Point[]>([{ x: 5, y: 5 }]);
+  
+  // Mutable state for game loop
   const foodsRef = useRef<Food[]>([]); 
   const direction = useRef<Point>({ x: 1, y: 0 }); 
   const nextDirection = useRef<Point>({ x: 1, y: 0 });
@@ -74,7 +81,7 @@ export const useSnakeGame = (isMuted: boolean = false) => {
     }
   }, []);
 
-  const generateFoods = (targetWord: WordItem, allWords: WordItem[], currentSnake: Point[]) => {
+  const generateRound = (targetWord: WordItem, allWords: WordItem[], currentSnake: Point[]): { foods: Food[] } => {
     // 1. Prepare Content List
     const foodItems: { meaning: string; correct: boolean }[] = [];
     
@@ -82,7 +89,9 @@ export const useSnakeGame = (isMuted: boolean = false) => {
     foodItems.push({ meaning: targetWord.meaning, correct: true });
 
     // Find Distractors
-    const otherWords = allWords.filter(w => w.meaning !== targetWord.meaning);
+    const otherWords = allWords.filter(w => w.meaning.trim() !== targetWord.meaning.trim());
+    
+    // Get unique meanings from other words
     const uniqueMeanings = Array.from(new Set(otherWords.map(w => w.meaning)));
     const shuffledMeanings = uniqueMeanings.sort(() => 0.5 - Math.random());
 
@@ -90,6 +99,15 @@ export const useSnakeGame = (isMuted: boolean = false) => {
     for (const meaning of shuffledMeanings) {
         if (foodItems.length >= 4) break;
         foodItems.push({ meaning, correct: false });
+    }
+    
+    // FALLBACK: If we still don't have 4 items (because dataset is too small), 
+    // fill with whatever we have or duplicates to ensure the UI looks consistent.
+    // This addresses the "must have 4 options" requirement rigidly.
+    while (foodItems.length < 4 && uniqueMeanings.length > 0) {
+        // Just pick random ones from uniqueMeanings again if we have to
+        const randomMeaning = uniqueMeanings[Math.floor(Math.random() * uniqueMeanings.length)];
+        foodItems.push({ meaning: randomMeaning, correct: false });
     }
 
     // 2. Find Empty Cells on Grid
@@ -114,7 +132,7 @@ export const useSnakeGame = (isMuted: boolean = false) => {
     
     // We iterate through our prepared foodItems and assign them to random empty spots
     for (const item of foodItems) {
-        if (emptyCells.length === 0) break; // Should effectively never happen unless board is full
+        if (emptyCells.length === 0) break; 
         const pos = emptyCells.pop()!;
         newFoods.push({
             x: pos.x,
@@ -124,8 +142,7 @@ export const useSnakeGame = (isMuted: boolean = false) => {
         });
     }
 
-    setFoods(newFoods);
-    foodsRef.current = newFoods; 
+    return { foods: newFoods };
   };
 
   const nextQuestion = useCallback((overrideWords?: WordItem[]) => {
@@ -140,14 +157,24 @@ export const useSnakeGame = (isMuted: boolean = false) => {
 
     const next = available[Math.floor(Math.random() * available.length)];
     usedWordsRef.current.add(next.word);
-    setCurrentWord(next);
-    generateFoods(next, currentList, snakeRef.current);
+    
+    const { foods } = generateRound(next, currentList, snakeRef.current);
+    
+    // Update State Atomically
+    setCurrentRound({ word: next, foods });
+    foodsRef.current = foods;
   }, [words]);
 
   const startGame = useCallback((duration: number, initialWords?: WordItem[]) => {
     const activeWords = initialWords || words;
     if (activeWords.length === 0) {
         console.warn("Start Game aborted: No words available.");
+        return;
+    }
+
+    // Ensure we have enough data to generate 4 options effectively
+    if (activeWords.length < 2) {
+        alert("Not enough vocabulary words to play. Please load a larger list.");
         return;
     }
 
@@ -230,8 +257,6 @@ export const useSnakeGame = (isMuted: boolean = false) => {
                 y: head.y + bounceDir.y
             };
             
-            // If bounce pushes out of bounds (e.g. 1-length snake at edge), clamp it? 
-            // In grid, just don't move if still invalid
             if (newHead.x < 0 || newHead.x >= GRID_SIZE || newHead.y < 0 || newHead.y >= GRID_SIZE) {
                 newHead = head; // Stay put if bounce fails
             }
@@ -257,20 +282,21 @@ export const useSnakeGame = (isMuted: boolean = false) => {
              } else {
                  playTone('wrong');
                  setScore(s => Math.max(0, s - 5));
-                 setTimeout(() => nextQuestion(), 0);
+                 
+                 // Remove only the hit food
+                 const remainingFoods = currentFoods.filter(f => f !== hitFood);
+                 foodsRef.current = remainingFoods;
+                 setCurrentRound(prev => ({ ...prev, foods: remainingFoods }));
              }
         }
 
-        // Construct new snake
         const newSnake = [newHead, ...snakeRef.current];
         
         if (wallHit) {
-             // Shrink on wall hit
              if (newSnake.length > 2) {
-                 newSnake.pop(); // Pop tail movement
-                 newSnake.pop(); // Pop for damage
+                 newSnake.pop(); 
+                 newSnake.pop(); 
              } else {
-                 // Too small to survive
                  if (newSnake.length > 1) newSnake.pop();
                  else {
                      setGameState(GameState.GAME_OVER);
@@ -279,9 +305,8 @@ export const useSnakeGame = (isMuted: boolean = false) => {
                  }
              }
         } else if (!ate) {
-            newSnake.pop(); // Normal move
+            newSnake.pop(); 
             
-            // Additional penalty shrink for wrong food
             if (hitFood && !hitFood.correct) {
                 if (newSnake.length > 1) {
                     newSnake.pop();
@@ -293,7 +318,6 @@ export const useSnakeGame = (isMuted: boolean = false) => {
             }
         }
 
-        // Final check on survival
         if (newSnake.length === 0) {
             setGameState(GameState.GAME_OVER);
             playTone('gameover');
@@ -331,8 +355,9 @@ export const useSnakeGame = (isMuted: boolean = false) => {
     score,
     timeLeft,
     snake,
-    foods,
-    currentWord,
+    currentRound, 
+    foods: currentRound.foods, 
+    currentWord: currentRound.word, 
     words,
     setWords,
     startGame,

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSnakeGame } from './hooks/useSnakeGame';
+import { useHandTracking } from './hooks/useHandTracking';
 import GameCanvas from './components/GameCanvas';
 import { GameState, WordItem } from './types';
 
@@ -20,11 +21,39 @@ function App() {
   const [isMuted, setIsMuted] = useState(false);
   const [showIntro, setShowIntro] = useState(true);
 
+  // Destructure state
   const { 
-    gameState, score, timeLeft, snake, foods, currentWord, words, setWords, 
+    gameState, score, timeLeft, snake, currentRound, words, setWords, 
     startGame, pauseGame, updateDirection, setGameState 
   } = useSnakeGame(isMuted);
   
+  const { word: currentWord, foods } = currentRound;
+
+  // Hand Tracking Logic
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const { fingerPosition, isCameraReady } = useHandTracking(videoRef.current, gameState === GameState.PLAYING);
+  
+  // Convert Finger Position (0-1) to Joystick Direction
+  useEffect(() => {
+    if (fingerPosition && gameState === GameState.PLAYING) {
+        // Center is 0.5, 0.5
+        const dx = fingerPosition.x - 0.5;
+        const dy = fingerPosition.y - 0.5;
+        
+        // Deadzone
+        if (Math.abs(dx) > 0.05 || Math.abs(dy) > 0.05) {
+            if (Math.abs(dx) > Math.abs(dy)) {
+                // Horizontal
+                updateDirection({ x: dx > 0 ? 1 : -1, y: 0 });
+            } else {
+                // Vertical
+                updateDirection({ x: 0, y: dy > 0 ? 1 : -1 });
+            }
+        }
+    }
+  }, [fingerPosition, gameState, updateDirection]);
+
+
   // Loading state
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState("");
@@ -35,13 +64,12 @@ function App() {
   const [selectedRange, setSelectedRange] = useState<number[] | null>(null);
   const [gameDuration, setGameDuration] = useState(10); // minutes
 
-  // Swipe handling
+  // Swipe handling (Backup Controls)
   const touchStart = useRef<{x: number, y: number} | null>(null);
 
   // Keyboard controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Prevent default scrolling for game keys
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
         e.preventDefault();
       }
@@ -60,32 +88,20 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [gameState, pauseGame, updateDirection]);
 
-  // Touch Handlers (Swipe)
+  // Touch Handlers
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
   };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-      if (gameState === GameState.PLAYING) {
-        // e.preventDefault(); 
-      }
-  };
-
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (!touchStart.current) return;
     const endX = e.changedTouches[0].clientX;
     const endY = e.changedTouches[0].clientY;
     const dx = endX - touchStart.current.x;
     const dy = endY - touchStart.current.y;
-
     if (Math.abs(dx) > Math.abs(dy)) {
-        if (Math.abs(dx) > 30) { 
-            updateDirection({ x: dx > 0 ? 1 : -1, y: 0 });
-        }
+        if (Math.abs(dx) > 30) updateDirection({ x: dx > 0 ? 1 : -1, y: 0 });
     } else {
-        if (Math.abs(dy) > 30) {
-            updateDirection({ x: 0, y: dy > 0 ? 1 : -1 });
-        }
+        if (Math.abs(dy) > 30) updateDirection({ x: 0, y: dy > 0 ? 1 : -1 });
     }
     touchStart.current = null;
   };
@@ -145,7 +161,6 @@ function App() {
   if (showIntro) {
     return (
       <div className="flex flex-col h-[100dvh] w-full items-center justify-center bg-paper text-ink p-6 select-none font-serif relative overflow-hidden">
-        {/* Mute Toggle on Intro */}
         <button 
           onClick={() => setIsMuted(!isMuted)}
           className="absolute top-4 right-4 p-2 bg-tan/20 rounded-full hover:bg-tan/40 transition-colors"
@@ -154,40 +169,29 @@ function App() {
         </button>
 
         <div className="max-w-md w-full text-center space-y-8 animate-fade-in">
-          {/* Header */}
           <div className="space-y-2">
             <h1 className="text-4xl md:text-6xl font-bold text-ink tracking-tight">
               iVocab <br/>
               <span className="text-olive">Hungry Snake</span>
             </h1>
             <p className="text-sm md:text-base text-frame italic font-sans tracking-widest mt-2">
-              Developed by Shirley Du
+              Finger & Camera Edition
             </p>
           </div>
-
-          {/* Deco Snake */}
-          <div className="text-6xl md:text-8xl py-4 animate-bounce">
-            🐍 🍞
-          </div>
-
-          {/* Instruction Card */}
+          <div className="text-6xl md:text-8xl py-4 animate-bounce">🐍 🍞</div>
           <div className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-tan shadow-lg">
             <h2 className="text-lg font-bold text-ink mb-2 uppercase tracking-wide">Instruction</h2>
             <p className="text-base md:text-lg text-ink/80 leading-relaxed font-sans">
-              Guide the hungry snake to the bread with the correct <span className="font-bold text-olive">Chinese meaning</span>. 
+              Use your <b>Index Finger</b> in front of the camera to guide the snake!
               <br/>
-              Set the feeding time, Choose the Difficulty Level and the Units range; 
-              <br/>
-              Eat right to <span className="font-bold text-head-stroke">Grow</span> and <span className="font-bold text-head-stroke">Score!</span>
+              Eat the bread with the correct meaning.
             </p>
           </div>
-
-          {/* Start Button */}
           <button 
             onClick={handleEnterGame}
             className="w-full bg-olive hover:bg-opacity-80 text-white text-xl font-bold py-4 rounded-full shadow-xl transform transition-all active:scale-95 hover:-translate-y-1"
           >
-            Start Game
+            Enter Game
           </button>
         </div>
       </div>
@@ -196,157 +200,130 @@ function App() {
 
   // --- GAME UI ---
   return (
-    <div className="flex flex-col h-[100dvh] w-full max-w-[600px] md:max-w-[1400px] md:flex-row mx-auto p-2 md:p-4 gap-2 md:gap-4 font-sans touch-none select-none overflow-hidden overscroll-none relative">
+    <div className="flex flex-col h-[100dvh] w-full mx-auto font-sans touch-none select-none overflow-hidden overscroll-none relative bg-black">
       
-      {/* Mute Toggle (Floating top right) */}
-      <button 
-          onClick={() => setIsMuted(!isMuted)}
-          className="absolute top-2 right-2 md:top-4 md:right-4 z-30 p-2 bg-paper/80 backdrop-blur border border-tan rounded-full shadow-sm hover:bg-tan/20 active:scale-95 text-xl"
-          title={isMuted ? "Unmute" : "Mute"}
-      >
-          {isMuted ? '🔇' : '🔊'}
-      </button>
+      {/* Hidden Video Element for Tracking */}
+      <video 
+        ref={videoRef} 
+        className="absolute inset-0 w-full h-full object-cover opacity-60 pointer-events-none" 
+        playsInline 
+        muted
+      />
 
-      {/* --- Main Game Area (Flex Grow) --- */}
-      <div className="flex-1 relative flex flex-col items-center justify-center min-h-0">
+      {/* Top Bar: HUD */}
+      <div className="absolute top-0 left-0 right-0 z-30 p-2 md:p-4 flex justify-between items-start pointer-events-none">
+          <div className="bg-paper/90 backdrop-blur-md px-4 py-2 rounded-full shadow-lg border border-white/20 flex gap-4 pointer-events-auto">
+             <div>
+                <span className="text-xs uppercase text-frame font-bold block">Score</span>
+                <span className="text-xl font-bold text-ink">{score}</span>
+             </div>
+             <div>
+                <span className="text-xs uppercase text-frame font-bold block">Time</span>
+                <span className="text-xl font-bold text-ink">{formatTime(timeLeft)}</span>
+             </div>
+          </div>
+
+          <button 
+            onClick={() => setIsMuted(!isMuted)}
+            className="p-3 bg-paper/90 backdrop-blur-md rounded-full shadow-lg pointer-events-auto"
+          >
+            {isMuted ? '🔇' : '🔊'}
+          </button>
+      </div>
+
+      {/* --- Main Game Area --- */}
+      <div className="flex-1 flex items-center justify-center relative z-10">
         <div 
-          className="relative w-full aspect-square max-h-[60vh] md:max-h-[85vh] touch-none"
+          className="relative w-full max-w-[500px] aspect-square m-4 touch-none"
           onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          <GameCanvas snake={snake} foods={foods} gridSize={GRID_SIZE} />
+          {/* Glass Board */}
+          <div className="absolute inset-0 bg-paper/30 backdrop-blur-md rounded-2xl border-2 border-white/50 shadow-2xl overflow-hidden">
+             <GameCanvas snake={snake} foods={foods} gridSize={GRID_SIZE} />
+             
+             {/* Finger Guide Dot (Virtual Joystick Feedback) */}
+             {fingerPosition && (
+                 <div 
+                    className="absolute w-6 h-6 bg-head/80 border-2 border-white rounded-full shadow-glow pointer-events-none transform -translate-x-1/2 -translate-y-1/2 transition-transform duration-75"
+                    style={{ 
+                        left: `${fingerPosition.x * 100}%`, 
+                        top: `${fingerPosition.y * 100}%` 
+                    }}
+                 />
+             )}
+          </div>
+
+          {/* Loading / Camera Wait */}
+          {gameState === GameState.PLAYING && !isCameraReady && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-2xl z-40 text-white">
+                  <div className="text-center">
+                      <div className="text-4xl mb-2 animate-spin">📷</div>
+                      <p>Starting Camera...</p>
+                  </div>
+              </div>
+          )}
           
           {/* Pause / Game Over Overlay */}
           {(gameState === GameState.PAUSED || gameState === GameState.GAME_OVER) && (
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm rounded-xl flex items-center justify-center z-20">
-              <div className="bg-paper p-6 md:p-8 rounded-lg shadow-2xl text-center border border-frame mx-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm rounded-2xl flex items-center justify-center z-50">
+              <div className="bg-paper p-8 rounded-xl shadow-2xl text-center mx-6 max-w-sm">
                 <h2 className="text-3xl font-serif font-bold mb-4 text-ink">
                   {gameState === GameState.GAME_OVER ? 'Game Over' : 'Paused'}
                 </h2>
                 <div className="text-lg mb-6">Score: {score}</div>
-                {gameState === GameState.GAME_OVER && (
-                   <button 
-                     onClick={() => setShowConfig(true)}
-                     className="bg-olive hover:bg-opacity-80 text-white px-6 py-2 rounded-full font-bold transition-all shadow-lg active:scale-95"
-                   >
-                     New Game
-                   </button>
-                )}
-                {gameState === GameState.PAUSED && (
-                   <button 
-                     onClick={pauseGame}
-                     className="bg-tan hover:bg-opacity-80 text-ink px-6 py-2 rounded-full font-bold transition-all shadow-lg active:scale-95"
-                   >
-                     Resume
-                   </button>
-                )}
+                <div className="flex flex-col gap-3">
+                    {gameState === GameState.GAME_OVER && (
+                    <button 
+                        onClick={() => setShowConfig(true)}
+                        className="bg-olive hover:bg-opacity-80 text-white px-8 py-3 rounded-full font-bold shadow-lg"
+                    >
+                        Play Again
+                    </button>
+                    )}
+                    {gameState === GameState.PAUSED && (
+                    <button 
+                        onClick={pauseGame}
+                        className="bg-tan hover:bg-opacity-80 text-ink px-8 py-3 rounded-full font-bold shadow-lg"
+                    >
+                        Resume
+                    </button>
+                    )}
+                </div>
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* --- Controls Section --- */}
-      <div className="w-full md:w-80 flex flex-col gap-2 md:gap-4 shrink-0 pb-safe">
-        
-        {/* Stats Row */}
-        <div className="bg-paper p-3 md:p-4 rounded-xl shadow-md border border-tan flex flex-row justify-between items-center gap-2">
-            <div className="flex gap-4 md:gap-0 md:justify-between w-full px-2 justify-center">
-                <div className="text-center">
-                    <div className="text-[10px] text-frame uppercase">Score</div>
-                    <div className="text-lg font-bold text-ink">{score}</div>
-                </div>
-                <div className="text-center">
-                    <div className="text-[10px] text-frame uppercase">Time</div>
-                    <div className="text-lg font-bold text-ink">{formatTime(timeLeft)}</div>
-                </div>
-            </div>
-        </div>
-
-        {/* 2-Column Control Panel */}
-        <div className="grid grid-cols-2 gap-2 h-40 md:h-48">
-            
-            {/* Left Column: Cue Word (Swapped & Bigger) */}
-            <div className="bg-paper rounded-xl border-2 border-ink/10 shadow-inner p-2 flex flex-col items-center justify-center text-center overflow-hidden relative">
+      {/* Bottom Area: Word Card */}
+      <div className="pb-8 px-4 flex justify-center z-20 pointer-events-none">
+         <div className="bg-paper/90 backdrop-blur-xl w-full max-w-[500px] p-4 rounded-2xl shadow-2xl border border-white/40 flex items-center justify-between pointer-events-auto">
+            <div className="flex-1 text-center">
                 {currentWord ? (
-                    <div className="flex flex-col items-center justify-center h-full">
-                        <div className="text-2xl md:text-3xl lg:text-4xl font-serif font-bold text-ink leading-tight break-words w-full px-1">
-                            {currentWord.word}
-                        </div>
-                        <div className="text-xs md:text-sm text-olive font-bold mt-2 bg-olive/10 px-2 py-0.5 rounded-full">
-                            {currentWord.pos}
-                        </div>
+                    <div>
+                        <div className="text-3xl font-serif font-bold text-ink">{currentWord.word}</div>
+                        <div className="text-sm text-olive font-bold mt-1 bg-olive/10 inline-block px-2 rounded">{currentWord.pos}</div>
                     </div>
                 ) : (
-                    <div className="text-sm text-tan animate-pulse">Waiting...</div>
+                    <div className="text-tan animate-pulse">Get Ready...</div>
                 )}
             </div>
-
-            {/* Right Column: D-Pad */}
-            <div className="bg-tan/10 p-2 rounded-xl border border-frame/30 flex items-center justify-center">
-                 <div className="grid grid-cols-3 gap-1 w-full max-w-[140px] aspect-square">
-                    {/* UP */}
-                    <div className="col-start-2">
-                        <button 
-                            className="w-full h-full bg-olive/20 active:bg-olive text-olive active:text-white rounded-lg border-2 border-olive flex items-center justify-center text-xl transition-colors shadow-sm"
-                            onClick={() => updateDirection({x:0, y:-1})}
-                        >▲</button>
-                    </div>
-                    
-                    {/* LEFT */}
-                    <div className="col-start-1 row-start-2">
-                        <button 
-                            className="w-full h-full bg-olive/20 active:bg-olive text-olive active:text-white rounded-lg border-2 border-olive flex items-center justify-center text-xl transition-colors shadow-sm"
-                            onClick={() => updateDirection({x:-1, y:0})}
-                        >◀</button>
-                    </div>
-
-                    {/* CENTER (Empty or Dot) */}
-                    <div className="col-start-2 row-start-2 flex items-center justify-center">
-                        <div className="w-2 h-2 rounded-full bg-tan/50"></div>
-                    </div>
-
-                    {/* RIGHT */}
-                    <div className="col-start-3 row-start-2">
-                        <button 
-                            className="w-full h-full bg-olive/20 active:bg-olive text-olive active:text-white rounded-lg border-2 border-olive flex items-center justify-center text-xl transition-colors shadow-sm"
-                            onClick={() => updateDirection({x:1, y:0})}
-                        >▶</button>
-                    </div>
-
-                    {/* DOWN */}
-                    <div className="col-start-2 row-start-3">
-                        <button 
-                            className="w-full h-full bg-olive/20 active:bg-olive text-olive active:text-white rounded-lg border-2 border-olive flex items-center justify-center text-xl transition-colors shadow-sm"
-                            onClick={() => updateDirection({x:0, y:1})}
-                        >▼</button>
-                    </div>
-                </div>
+            
+            <div className="border-l border-frame/20 pl-4 flex flex-col gap-2">
+                 <button onClick={pauseGame} className="p-2 bg-tan/20 rounded-lg text-xs font-bold text-ink hover:bg-tan/40">
+                    {gameState === GameState.PAUSED ? 'RESUME' : 'PAUSE'}
+                 </button>
+                 <button onClick={() => { setGameState(GameState.GAME_OVER); setShowConfig(true); }} className="p-2 bg-head/20 rounded-lg text-xs font-bold text-head-stroke hover:bg-head/40">
+                    END
+                 </button>
             </div>
+         </div>
+      </div>
 
-        </div>
-
-        {/* System Buttons */}
-        <div className="grid grid-cols-2 gap-2">
-             <button 
-                onClick={pauseGame} 
-                className="bg-tan text-ink font-bold py-3 rounded-xl hover:bg-opacity-80 active:scale-95 transition-all text-sm md:text-base shadow-sm"
-                disabled={gameState === GameState.IDLE || gameState === GameState.GAME_OVER}
-             >
-                {gameState === GameState.PAUSED ? 'Resume' : 'Pause'}
-             </button>
-             <button 
-                onClick={() => { setGameState(GameState.GAME_OVER); setShowConfig(true); }}
-                className="bg-head text-white font-bold py-3 rounded-xl hover:bg-opacity-80 active:scale-95 transition-all text-sm md:text-base shadow-sm"
-             >
-                End Game
-             </button>
-        </div>
-
-        {/* Configuration Modal (Inline) */}
-        {showConfig && (
-            <div className="absolute inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+      {/* Configuration Modal */}
+      {showConfig && (
+            <div className="absolute inset-0 bg-black/80 z-[60] flex items-center justify-center p-4">
                 <div className="bg-paper rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6 border-4 border-frame">
                     <h2 className="text-2xl font-serif font-bold text-ink mb-4 text-center">Setup Game</h2>
                     
@@ -357,7 +334,6 @@ function App() {
                         </div>
                     ) : (
                         <div className="space-y-6">
-                            {/* Duration */}
                             <div>
                                 <label className="block text-sm font-bold text-ink mb-2">Duration (Minutes)</label>
                                 <div className="flex gap-2">
@@ -372,13 +348,9 @@ function App() {
                                     ))}
                                 </div>
                             </div>
-
                             <hr className="border-tan" />
-
-                            {/* Mode Selection Tab */}
                             <div className="space-y-4">
                                 <h3 className="font-bold text-lg text-ink">Select Vocabulary Source</h3>
-                                
                                 <div className="bg-white/50 p-4 rounded-xl border border-tan">
                                     <div className="text-sm font-bold text-olive uppercase mb-2">iVocab Level & Unit</div>
                                     <div className="flex flex-wrap gap-2 mb-2">
@@ -417,8 +389,6 @@ function App() {
                 </div>
             </div>
         )}
-
-      </div>
     </div>
   );
 }

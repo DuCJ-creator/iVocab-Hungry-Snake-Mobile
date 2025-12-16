@@ -25,8 +25,23 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ snake, foods, gridSize }) => {
 
     const cellSize = rect.width / gridSize;
 
-    // Clear
+    // Clear with transparency
     ctx.clearRect(0, 0, rect.width, rect.height);
+    
+    // Optional: Draw a faint grid for guidance
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= gridSize; i++) {
+        ctx.beginPath();
+        ctx.moveTo(i * cellSize, 0);
+        ctx.lineTo(i * cellSize, rect.height);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(0, i * cellSize);
+        ctx.lineTo(rect.width, i * cellSize);
+        ctx.stroke();
+    }
 
     // Draw Foods
     foods.forEach(f => {
@@ -36,27 +51,27 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ snake, foods, gridSize }) => {
       // Shadow
       ctx.beginPath();
       ctx.ellipse(cx, cy + (cellSize * 0.05), cellSize * 0.45, cellSize * 0.35, 0, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(0,0,0,0.1)';
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
       ctx.fill();
 
-      // Bun (Bigger: 0.45 width instead of 0.4)
+      // Bun (Bigger: 0.45 width)
       ctx.beginPath();
       ctx.ellipse(cx, cy, cellSize * 0.45, cellSize * 0.35, 0, 0, Math.PI * 2);
       ctx.fillStyle = '#D8C4A8'; // Tan bun
       ctx.fill();
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = '#B7AFA1';
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#fff';
       ctx.stroke();
 
-      // Text (Bigger: 0.4x cell size instead of 0.25)
+      // Text 
       ctx.fillStyle = '#5A4A42';
-      ctx.font = `bold ${cellSize * 0.4}px sans-serif`;
+      ctx.font = `bold ${cellSize * 0.35}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       
       const lines = f.meaning.split(/;|，/);
       let text = lines[0];
-      // Truncate if too long (approx 4-5 chars for big font)
+      // Truncate if too long 
       if (text.length > 4) {
           text = text.substring(0, 3) + '..';
       }
@@ -70,12 +85,11 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ snake, foods, gridSize }) => {
       const isHead = index === 0;
 
       ctx.beginPath();
-      // Snake segments slightly bigger too (0.48 for head)
       ctx.arc(cx, cy, cellSize * (isHead ? 0.48 : 0.45), 0, Math.PI * 2);
-      ctx.fillStyle = isHead ? '#D8A8A8' : '#A8B7A5';
+      ctx.fillStyle = isHead ? '#D8A8A8' : 'rgba(168, 183, 165, 0.9)';
       ctx.fill();
       ctx.lineWidth = 2;
-      ctx.strokeStyle = isHead ? '#B78A8A' : '#8C9D8A';
+      ctx.strokeStyle = isHead ? '#fff' : 'rgba(255,255,255,0.6)';
       ctx.stroke();
 
       // Eyes for head
@@ -105,7 +119,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ snake, foods, gridSize }) => {
   return (
     <canvas 
       ref={canvasRef} 
-      className="w-full h-full rounded-xl shadow-inner bg-paper border-4 border-frame"
+      className="w-full h-full rounded-xl"
     />
   );
 };
