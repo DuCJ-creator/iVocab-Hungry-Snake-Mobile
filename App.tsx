@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSnakeGame } from './hooks/useSnakeGame';
-import { useHandTracking } from './hooks/useHandTracking';
 import GameCanvas from './components/GameCanvas';
 import { GameState, WordItem } from './types';
 
-// Constants
 const GRID_SIZE = 12; 
 const LEVEL_CSVS: Record<number, string> = {
   1: "https://ducj-creator.github.io/iVocab-Self-Practice/level1.csv",
@@ -21,7 +19,6 @@ function App() {
   const [isMuted, setIsMuted] = useState(false);
   const [showIntro, setShowIntro] = useState(true);
 
-  // Destructure state
   const { 
     gameState, score, timeLeft, snake, currentRound, words, setWords, 
     startGame, pauseGame, updateDirection, setGameState 
@@ -29,68 +26,43 @@ function App() {
   
   const { word: currentWord, foods } = currentRound;
 
-  // Hand Tracking Logic
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const { fingerPosition, isCameraReady } = useHandTracking(videoRef.current, gameState === GameState.PLAYING);
-  
-  // Convert Finger Position (0-1) to Joystick Direction
-  useEffect(() => {
-    if (fingerPosition && gameState === GameState.PLAYING) {
-        // Center is 0.5, 0.5
-        const dx = fingerPosition.x - 0.5;
-        const dy = fingerPosition.y - 0.5;
-        
-        // Deadzone
-        if (Math.abs(dx) > 0.05 || Math.abs(dy) > 0.05) {
-            if (Math.abs(dx) > Math.abs(dy)) {
-                // Horizontal
-                updateDirection({ x: dx > 0 ? 1 : -1, y: 0 });
-            } else {
-                // Vertical
-                updateDirection({ x: 0, y: dy > 0 ? 1 : -1 });
-            }
-        }
-    }
-  }, [fingerPosition, gameState, updateDirection]);
-
-
-  // Loading state
+  // Loading & Config
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState("");
   const [showConfig, setShowConfig] = useState(false); 
-  
-  // Selection state
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
   const [selectedRange, setSelectedRange] = useState<number[] | null>(null);
-  const [gameDuration, setGameDuration] = useState(10); // minutes
+  const [gameDuration, setGameDuration] = useState(10); 
 
-  // Swipe handling (Backup Controls)
+  // Touch Swipe
   const touchStart = useRef<{x: number, y: number} | null>(null);
 
-  // Keyboard controls
+  // Keyboard
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
         e.preventDefault();
       }
-
       if (gameState === GameState.PLAYING) {
         if (e.key === 'ArrowUp') updateDirection({ x: 0, y: -1 });
         if (e.key === 'ArrowDown') updateDirection({ x: 0, y: 1 });
         if (e.key === 'ArrowLeft') updateDirection({ x: -1, y: 0 });
         if (e.key === 'ArrowRight') updateDirection({ x: 1, y: 0 });
       }
-      if (e.key === ' ') {
-        pauseGame();
-      }
+      if (e.key === ' ') pauseGame();
     };
     window.addEventListener('keydown', handleKeyDown, { passive: false });
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [gameState, pauseGame, updateDirection]);
 
-  // Touch Handlers
+  // Touch Handlers for Board Swipe
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  };
+  const handleTouchMove = (e: React.TouchEvent) => {
+      if (gameState === GameState.PLAYING) {
+        // e.preventDefault(); 
+      }
   };
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (!touchStart.current) return;
@@ -106,7 +78,6 @@ function App() {
     touchStart.current = null;
   };
 
-  // Data Loading
   const handleLoadCSV = async () => {
     if (!selectedLevel || !selectedRange) return;
     setIsLoading(true);
@@ -114,7 +85,6 @@ function App() {
     try {
       const res = await fetch(LEVEL_CSVS[selectedLevel]);
       const txt = await res.text();
-      // Simple CSV Parse
       const lines = txt.split(/\r?\n/);
       const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
       
@@ -133,17 +103,12 @@ function App() {
            if (w && m) parsed.push({ word: w, pos: p || '', meaning: m });
         }
       }
-
       if (parsed.length === 0) throw new Error("No words found in this range.");
-      
       setWords(parsed);
       setShowConfig(false);
       startGame(gameDuration, parsed);
-    } catch (e: any) {
-      alert(e.message);
-    } finally {
-      setIsLoading(false);
-    }
+    } catch (e: any) { alert(e.message); } 
+    finally { setIsLoading(false); }
   };
 
   const formatTime = (s: number) => {
@@ -152,12 +117,6 @@ function App() {
     return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
   };
 
-  const handleEnterGame = () => {
-    setShowIntro(false);
-    setShowConfig(true);
-  };
-
-  // --- INTRO SCREEN ---
   if (showIntro) {
     return (
       <div className="flex flex-col h-[100dvh] w-full items-center justify-center bg-paper text-ink p-6 select-none font-serif relative overflow-hidden">
@@ -169,26 +128,29 @@ function App() {
         </button>
 
         <div className="max-w-md w-full text-center space-y-8 animate-fade-in">
-          <div className="space-y-2">
-            <h1 className="text-4xl md:text-6xl font-bold text-ink tracking-tight">
-              iVocab <br/>
-              <span className="text-olive">Hungry Snake</span>
+          <div className="space-y-4">
+            <h1 className="text-4xl md:text-6xl font-bold text-ink tracking-tight font-serif">
+              iVocab Hungry Snake
             </h1>
-            <p className="text-sm md:text-base text-frame italic font-sans tracking-widest mt-2">
-              Finger & Camera Edition
+            <p className="text-sm font-bold text-olive uppercase tracking-widest">
+              Developed by Shirley Du
             </p>
           </div>
+          
           <div className="text-6xl md:text-8xl py-4 animate-bounce">🐍 🍞</div>
+          
           <div className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-tan shadow-lg">
-            <h2 className="text-lg font-bold text-ink mb-2 uppercase tracking-wide">Instruction</h2>
             <p className="text-base md:text-lg text-ink/80 leading-relaxed font-sans">
-              Use your <b>Index Finger</b> in front of the camera to guide the snake!
+              Guide the hungry snake to the bread with the correct chinese meaning. 
               <br/>
-              Eat the bread with the correct meaning.
+              Set the feeding time, choose the difficulty level and the units range; 
+              <br/>
+              Eat right to grow and score.
             </p>
           </div>
+          
           <button 
-            onClick={handleEnterGame}
+            onClick={() => { setShowIntro(false); setShowConfig(true); }}
             className="w-full bg-olive hover:bg-opacity-80 text-white text-xl font-bold py-4 rounded-full shadow-xl transform transition-all active:scale-95 hover:-translate-y-1"
           >
             Enter Game
@@ -198,135 +160,143 @@ function App() {
     );
   }
 
-  // --- GAME UI ---
   return (
-    <div className="flex flex-col h-[100dvh] w-full mx-auto font-sans touch-none select-none overflow-hidden overscroll-none relative bg-black">
+    <div className="flex flex-col h-[100dvh] w-full mx-auto font-sans touch-none select-none overflow-hidden overscroll-none relative bg-paper">
       
-      {/* Hidden Video Element for Tracking */}
-      <video 
-        ref={videoRef} 
-        className="absolute inset-0 w-full h-full object-cover opacity-60 pointer-events-none" 
-        playsInline 
-        muted
-      />
-
-      {/* Top Bar: HUD */}
-      <div className="absolute top-0 left-0 right-0 z-30 p-2 md:p-4 flex justify-between items-start pointer-events-none">
-          <div className="bg-paper/90 backdrop-blur-md px-4 py-2 rounded-full shadow-lg border border-white/20 flex gap-4 pointer-events-auto">
+      {/* Top HUD */}
+      <div className="w-full p-2 flex justify-between items-center z-30">
+          <div className="bg-white/60 px-4 py-2 rounded-full shadow-sm border border-tan/20 flex gap-4">
              <div>
-                <span className="text-xs uppercase text-frame font-bold block">Score</span>
-                <span className="text-xl font-bold text-ink">{score}</span>
+                <span className="text-[10px] uppercase text-frame font-bold block">Score</span>
+                <span className="text-lg font-bold text-ink">{score}</span>
              </div>
              <div>
-                <span className="text-xs uppercase text-frame font-bold block">Time</span>
-                <span className="text-xl font-bold text-ink">{formatTime(timeLeft)}</span>
+                <span className="text-[10px] uppercase text-frame font-bold block">Time</span>
+                <span className="text-lg font-bold text-ink">{formatTime(timeLeft)}</span>
              </div>
           </div>
-
           <button 
             onClick={() => setIsMuted(!isMuted)}
-            className="p-3 bg-paper/90 backdrop-blur-md rounded-full shadow-lg pointer-events-auto"
+            className="p-2 bg-white/60 rounded-full shadow-sm border border-tan/20 text-lg"
           >
             {isMuted ? '🔇' : '🔊'}
           </button>
       </div>
 
-      {/* --- Main Game Area --- */}
-      <div className="flex-1 flex items-center justify-center relative z-10">
+      {/* Main Game Board Area */}
+      <div className="flex-1 w-full flex items-center justify-center p-4 min-h-0">
         <div 
-          className="relative w-full max-w-[500px] aspect-square m-4 touch-none"
+          className="relative w-full max-w-[500px] aspect-square shadow-2xl rounded-2xl border-[6px] border-white overflow-hidden"
           onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          {/* Glass Board */}
-          <div className="absolute inset-0 bg-paper/30 backdrop-blur-md rounded-2xl border-2 border-white/50 shadow-2xl overflow-hidden">
              <GameCanvas snake={snake} foods={foods} gridSize={GRID_SIZE} />
              
-             {/* Finger Guide Dot (Virtual Joystick Feedback) */}
-             {fingerPosition && (
-                 <div 
-                    className="absolute w-6 h-6 bg-head/80 border-2 border-white rounded-full shadow-glow pointer-events-none transform -translate-x-1/2 -translate-y-1/2 transition-transform duration-75"
-                    style={{ 
-                        left: `${fingerPosition.x * 100}%`, 
-                        top: `${fingerPosition.y * 100}%` 
-                    }}
-                 />
-             )}
-          </div>
-
-          {/* Loading / Camera Wait */}
-          {gameState === GameState.PLAYING && !isCameraReady && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-2xl z-40 text-white">
-                  <div className="text-center">
-                      <div className="text-4xl mb-2 animate-spin">📷</div>
-                      <p>Starting Camera...</p>
+             {/* Overlays */}
+             {(gameState === GameState.PAUSED || gameState === GameState.GAME_OVER) && (
+                <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+                  <div className="bg-paper p-6 rounded-xl shadow-2xl text-center mx-6 max-w-sm border border-white/40">
+                    <h2 className="text-3xl font-serif font-bold mb-4 text-ink">
+                      {gameState === GameState.GAME_OVER ? 'Game Over' : 'Paused'}
+                    </h2>
+                    <div className="text-lg mb-6 text-ink/80">Score: <span className="font-bold text-ink">{score}</span></div>
+                    <div className="flex flex-col gap-3">
+                        {gameState === GameState.GAME_OVER ? (
+                        <button 
+                            onClick={() => setShowConfig(true)}
+                            className="bg-olive hover:bg-opacity-80 text-white px-8 py-3 rounded-full font-bold shadow-lg"
+                        >
+                            Play Again
+                        </button>
+                        ) : (
+                        <button 
+                            onClick={pauseGame}
+                            className="bg-tan hover:bg-opacity-80 text-ink px-8 py-3 rounded-full font-bold shadow-lg"
+                        >
+                            Resume
+                        </button>
+                        )}
+                    </div>
                   </div>
-              </div>
-          )}
-          
-          {/* Pause / Game Over Overlay */}
-          {(gameState === GameState.PAUSED || gameState === GameState.GAME_OVER) && (
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm rounded-2xl flex items-center justify-center z-50">
-              <div className="bg-paper p-8 rounded-xl shadow-2xl text-center mx-6 max-w-sm">
-                <h2 className="text-3xl font-serif font-bold mb-4 text-ink">
-                  {gameState === GameState.GAME_OVER ? 'Game Over' : 'Paused'}
-                </h2>
-                <div className="text-lg mb-6">Score: {score}</div>
-                <div className="flex flex-col gap-3">
-                    {gameState === GameState.GAME_OVER && (
-                    <button 
-                        onClick={() => setShowConfig(true)}
-                        className="bg-olive hover:bg-opacity-80 text-white px-8 py-3 rounded-full font-bold shadow-lg"
-                    >
-                        Play Again
-                    </button>
-                    )}
-                    {gameState === GameState.PAUSED && (
-                    <button 
-                        onClick={pauseGame}
-                        className="bg-tan hover:bg-opacity-80 text-ink px-8 py-3 rounded-full font-bold shadow-lg"
-                    >
-                        Resume
-                    </button>
-                    )}
                 </div>
-              </div>
-            </div>
-          )}
+              )}
         </div>
       </div>
 
-      {/* Bottom Area: Word Card */}
-      <div className="pb-8 px-4 flex justify-center z-20 pointer-events-none">
-         <div className="bg-paper/90 backdrop-blur-xl w-full max-w-[500px] p-4 rounded-2xl shadow-2xl border border-white/40 flex items-center justify-between pointer-events-auto">
-            <div className="flex-1 text-center">
+      {/* Bottom Panel: Two Columns */}
+      <div className="bg-white/80 backdrop-blur-md border-t border-tan/20 w-full z-40 pb-safe">
+         <div className="max-w-[600px] mx-auto grid grid-cols-[1.2fr_1fr] gap-4 p-4 h-[180px]">
+            
+            {/* Left Column: Cue Word */}
+            <div className="bg-paper/50 rounded-xl border border-tan/20 p-4 flex flex-col justify-center items-center text-center shadow-inner relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-1 bg-olive opacity-50"></div>
                 {currentWord ? (
-                    <div>
-                        <div className="text-3xl font-serif font-bold text-ink">{currentWord.word}</div>
-                        <div className="text-sm text-olive font-bold mt-1 bg-olive/10 inline-block px-2 rounded">{currentWord.pos}</div>
-                    </div>
+                    <>
+                        <div className="text-sm font-bold text-frame uppercase mb-1">Current Word</div>
+                        <div className="text-2xl md:text-3xl font-serif font-bold text-ink mb-1 break-words w-full leading-tight">
+                            {currentWord.word}
+                        </div>
+                        <span className="inline-block px-2 py-0.5 bg-olive/10 text-olive text-xs font-bold rounded">
+                            {currentWord.pos}
+                        </span>
+                    </>
                 ) : (
-                    <div className="text-tan animate-pulse">Get Ready...</div>
+                    <div className="text-tan animate-pulse font-serif italic">Get Ready...</div>
                 )}
             </div>
-            
-            <div className="border-l border-frame/20 pl-4 flex flex-col gap-2">
-                 <button onClick={pauseGame} className="p-2 bg-tan/20 rounded-lg text-xs font-bold text-ink hover:bg-tan/40">
-                    {gameState === GameState.PAUSED ? 'RESUME' : 'PAUSE'}
-                 </button>
-                 <button onClick={() => { setGameState(GameState.GAME_OVER); setShowConfig(true); }} className="p-2 bg-head/20 rounded-lg text-xs font-bold text-head-stroke hover:bg-head/40">
-                    END
-                 </button>
+
+            {/* Right Column: Direction Panel + Actions */}
+            <div className="flex flex-col gap-2">
+                 {/* D-Pad Area */}
+                 <div className="flex-1 bg-paper/50 rounded-xl border border-tan/20 p-2 relative shadow-inner">
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                          <button 
+                             className="w-10 h-8 bg-white shadow-sm border border-tan/30 rounded-t-lg active:bg-olive active:text-white transition-colors mb-1 text-ink"
+                             onClick={() => updateDirection({x:0, y:-1})}
+                          >▲</button>
+                          <div className="flex gap-2">
+                              <button 
+                                 className="w-10 h-8 bg-white shadow-sm border border-tan/30 rounded-l-lg active:bg-olive active:text-white transition-colors text-ink"
+                                 onClick={() => updateDirection({x:-1, y:0})}
+                              >◀</button>
+                              <button 
+                                 className="w-10 h-8 bg-white shadow-sm border border-tan/30 rounded-r-lg active:bg-olive active:text-white transition-colors text-ink"
+                                 onClick={() => updateDirection({x:1, y:0})}
+                              >▶</button>
+                          </div>
+                          <button 
+                             className="w-10 h-8 bg-white shadow-sm border border-tan/30 rounded-b-lg active:bg-olive active:text-white transition-colors mt-1 text-ink"
+                             onClick={() => updateDirection({x:0, y:1})}
+                          >▼</button>
+                      </div>
+                 </div>
+                 
+                 {/* Action Buttons */}
+                 <div className="flex gap-2">
+                    <button 
+                        onClick={pauseGame} 
+                        className="flex-1 bg-tan/20 hover:bg-tan/40 text-ink text-xs font-bold py-2 rounded-lg transition-colors uppercase tracking-wide"
+                    >
+                        {gameState === GameState.PAUSED ? 'Resume' : 'Pause'}
+                    </button>
+                    <button 
+                        onClick={() => { setGameState(GameState.GAME_OVER); setShowConfig(true); }} 
+                        className="flex-1 bg-head/10 hover:bg-head/30 text-head-stroke text-xs font-bold py-2 rounded-lg transition-colors uppercase tracking-wide"
+                    >
+                        End
+                    </button>
+                 </div>
             </div>
+
          </div>
       </div>
 
-      {/* Configuration Modal */}
+      {/* Config Modal */}
       {showConfig && (
-            <div className="absolute inset-0 bg-black/80 z-[60] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
                 <div className="bg-paper rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6 border-4 border-frame">
                     <h2 className="text-2xl font-serif font-bold text-ink mb-4 text-center">Setup Game</h2>
-                    
                     {isLoading ? (
                         <div className="text-center py-10">
                             <div className="animate-spin text-4xl mb-2">⏳</div>

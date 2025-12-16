@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { GameState, Point, Food, WordItem, ControlMode } from '../types';
+import { GameState, Point, Food, WordItem } from '../types';
 
 const GRID_SIZE = 12;
 
@@ -14,12 +14,9 @@ export const useSnakeGame = (isMuted: boolean = false) => {
   const [timeLeft, setTimeLeft] = useState(600);
   const [words, setWords] = useState<WordItem[]>([]);
   
-  // Consolidate Word and Foods to prevent sync issues
   const [currentRound, setCurrentRound] = useState<RoundData>({ word: null, foods: [] });
-  
   const [snake, setSnake] = useState<Point[]>([{ x: 5, y: 5 }]);
   
-  // Mutable state for game loop
   const foodsRef = useRef<Food[]>([]); 
   const direction = useRef<Point>({ x: 1, y: 0 }); 
   const nextDirection = useRef<Point>({ x: 1, y: 0 });
@@ -28,6 +25,7 @@ export const useSnakeGame = (isMuted: boolean = false) => {
   const moveAccumulator = useRef<number>(0);
   const gameLoopRef = useRef<number>(0);
   const usedWordsRef = useRef<Set<string>>(new Set());
+  const penaltyRef = useRef<number>(0);
   
   const isMutedRef = useRef(isMuted);
   useEffect(() => {
@@ -37,18 +35,14 @@ export const useSnakeGame = (isMuted: boolean = false) => {
   // --- Sound Synthesizer ---
   const playTone = useCallback((type: 'correct' | 'wrong' | 'gameover') => {
     if (isMutedRef.current) return;
-    
     try {
         const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
         if (!AudioContext) return;
-        
         const ctx = new AudioContext();
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
-        
         osc.connect(gain);
         gain.connect(ctx.destination);
-
         const now = ctx.currentTime;
         
         if (type === 'correct') {
@@ -76,70 +70,47 @@ export const useSnakeGame = (isMuted: boolean = false) => {
             osc.start(now);
             osc.stop(now + 1);
         }
-    } catch (e) {
-        console.error("Audio synth error", e);
-    }
+    } catch (e) { console.error(e); }
   }, []);
 
   const generateRound = (targetWord: WordItem, allWords: WordItem[], currentSnake: Point[]): { foods: Food[] } => {
-    // 1. Prepare Content List
     const foodItems: { meaning: string; correct: boolean }[] = [];
-    
-    // Always add Correct Answer first
     foodItems.push({ meaning: targetWord.meaning, correct: true });
 
-    // Find Distractors
     const otherWords = allWords.filter(w => w.meaning.trim() !== targetWord.meaning.trim());
-    
-    // Get unique meanings from other words
     const uniqueMeanings = Array.from(new Set(otherWords.map(w => w.meaning)));
     const shuffledMeanings = uniqueMeanings.sort(() => 0.5 - Math.random());
 
-    // Fill up to 4 items (1 correct + 3 distractors)
     for (const meaning of shuffledMeanings) {
         if (foodItems.length >= 4) break;
         foodItems.push({ meaning, correct: false });
     }
     
-    // FALLBACK: If we still don't have 4 items (because dataset is too small), 
-    // fill with whatever we have or duplicates to ensure the UI looks consistent.
-    // This addresses the "must have 4 options" requirement rigidly.
-    while (foodItems.length < 4 && uniqueMeanings.length > 0) {
-        // Just pick random ones from uniqueMeanings again if we have to
-        const randomMeaning = uniqueMeanings[Math.floor(Math.random() * uniqueMeanings.length)];
-        foodItems.push({ meaning: randomMeaning, correct: false });
+    while (foodItems.length < 4) {
+        const filler = uniqueMeanings.length > 0 
+            ? uniqueMeanings[Math.floor(Math.random() * uniqueMeanings.length)] 
+            : (foodItems[0]?.meaning || "...");
+        foodItems.push({ meaning: filler, correct: false });
     }
 
-    // 2. Find Empty Cells on Grid
     const snakeBodySet = new Set(currentSnake.map(p => `${p.x},${p.y}`));
     const emptyCells: Point[] = [];
     for(let y=0; y<GRID_SIZE; y++) {
         for(let x=0; x<GRID_SIZE; x++) {
-            if (!snakeBodySet.has(`${x},${y}`)) {
-                emptyCells.push({x, y});
-            }
+            if (!snakeBodySet.has(`${x},${y}`)) emptyCells.push({x, y});
         }
     }
 
-    // Shuffle empty cells
     for (let i = emptyCells.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [emptyCells[i], emptyCells[j]] = [emptyCells[j], emptyCells[i]];
     }
 
-    // 3. Assign Positions to Food Items
     const newFoods: Food[] = [];
-    
-    // We iterate through our prepared foodItems and assign them to random empty spots
     for (const item of foodItems) {
         if (emptyCells.length === 0) break; 
         const pos = emptyCells.pop()!;
-        newFoods.push({
-            x: pos.x,
-            y: pos.y,
-            meaning: item.meaning,
-            correct: item.correct
-        });
+        newFoods.push({ x: pos.x, y: pos.y, meaning: item.meaning, correct: item.correct });
     }
 
     return { foods: newFoods };
@@ -158,29 +129,17 @@ export const useSnakeGame = (isMuted: boolean = false) => {
     const next = available[Math.floor(Math.random() * available.length)];
     usedWordsRef.current.add(next.word);
     
+    // We must use snakeRef.current here to avoid placing food on the snake
     const { foods } = generateRound(next, currentList, snakeRef.current);
-    
-    // Update State Atomically
     setCurrentRound({ word: next, foods });
     foodsRef.current = foods;
   }, [words]);
 
   const startGame = useCallback((duration: number, initialWords?: WordItem[]) => {
     const activeWords = initialWords || words;
-    if (activeWords.length === 0) {
-        console.warn("Start Game aborted: No words available.");
-        return;
-    }
-
-    // Ensure we have enough data to generate 4 options effectively
-    if (activeWords.length < 2) {
-        alert("Not enough vocabulary words to play. Please load a larger list.");
-        return;
-    }
-
-    if (initialWords) {
-        setWords(initialWords);
-    }
+    if (activeWords.length === 0) return;
+    
+    if (initialWords) setWords(initialWords);
 
     setScore(0);
     setTimeLeft(duration * 60);
@@ -192,10 +151,10 @@ export const useSnakeGame = (isMuted: boolean = false) => {
     direction.current = { x: 1, y: 0 };
     nextDirection.current = { x: 1, y: 0 };
     usedWordsRef.current.clear();
+    penaltyRef.current = 0; // Reset penalty
+    
     setGameState(GameState.PLAYING);
-    
     nextQuestion(activeWords);
-    
     lastTimeRef.current = performance.now();
   }, [words, nextQuestion]);
 
@@ -213,7 +172,34 @@ export const useSnakeGame = (isMuted: boolean = false) => {
     nextDirection.current = newDir;
   };
 
-  // Main Game Loop
+  // Helper to handle penalties (wall hit or wrong food)
+  const handlePenalty = () => {
+      penaltyRef.current += 1;
+      const cost = penaltyRef.current * 10;
+      
+      // Check if player can afford the penalty
+      if (score >= cost) {
+          playTone('wrong');
+          setScore(s => s - cost);
+          
+          // Shrink snake by 'penalty' amount, but keep at least length 1
+          const currentSnake = [...snakeRef.current];
+          for(let i=0; i<penaltyRef.current && currentSnake.length > 1; i++){
+              currentSnake.pop();
+          }
+          snakeRef.current = currentSnake;
+          setSnake(currentSnake);
+
+          // Force new round
+          setTimeout(() => nextQuestion(), 0);
+          return true; // Game continues
+      } else {
+          playTone('gameover');
+          setGameState(GameState.GAME_OVER);
+          return false; // Game over
+      }
+  };
+
   useEffect(() => {
     if (gameState !== GameState.PLAYING) {
       cancelAnimationFrame(gameLoopRef.current);
@@ -224,6 +210,7 @@ export const useSnakeGame = (isMuted: boolean = false) => {
       const dt = time - lastTimeRef.current;
       lastTimeRef.current = time;
       
+      // Speed logic
       const speed = Math.max(150, 350 - Math.floor(score / 50) * 10);
       
       moveAccumulator.current += dt;
@@ -232,108 +219,68 @@ export const useSnakeGame = (isMuted: boolean = false) => {
         moveAccumulator.current = 0;
         
         direction.current = nextDirection.current;
-
         const head = snakeRef.current[0];
         let newHead = {
           x: head.x + direction.current.x,
           y: head.y + direction.current.y
         };
 
-        // --- Wall Collision Logic ---
-        let wallHit = false;
+        // --- Collision Check (Wall or Self) ---
+        let collision = false;
+        
+        // Wall
         if (newHead.x < 0 || newHead.x >= GRID_SIZE || newHead.y < 0 || newHead.y >= GRID_SIZE) {
-            wallHit = true;
-            playTone('wrong');
-            setScore(s => Math.max(0, s - 5));
-            
-            // Bounce logic: Reverse direction
-            const bounceDir = { x: -direction.current.x, y: -direction.current.y };
-            direction.current = bounceDir;
-            nextDirection.current = bounceDir; // Commit bounce immediately
-            
-            // New head position based on bounce
-            newHead = {
-                x: head.x + bounceDir.x,
-                y: head.y + bounceDir.y
-            };
-            
-            if (newHead.x < 0 || newHead.x >= GRID_SIZE || newHead.y < 0 || newHead.y >= GRID_SIZE) {
-                newHead = head; // Stay put if bounce fails
-            }
+            collision = true;
+        }
+        // Self
+        else if (snakeRef.current.some((p, i) => i > 0 && p.x === newHead.x && p.y === newHead.y)) {
+             collision = true;
         }
 
-        // --- Self Collision Logic ---
-        if (snakeRef.current.some(p => p.x === newHead.x && p.y === newHead.y)) {
-            playTone('gameover');
-            setGameState(GameState.GAME_OVER);
-            return;
+        if (collision) {
+             handlePenalty();
+             return; // Don't move if we hit something, wait for next round or game over
         }
 
-        let ate = false;
+        // --- Movement & Eating ---
         const currentFoods = foodsRef.current;
         const hitFood = currentFoods.find(f => f.x === newHead.x && f.y === newHead.y);
 
+        let ateCorrect = false;
+
         if (hitFood) {
              if (hitFood.correct) {
-                 ate = true;
+                 ateCorrect = true;
                  playTone('correct');
-                 setScore(s => s + 10);
+                 setScore(s => s + 10 + (penaltyRef.current > 0 ? 0 : 5)); // Bonus if no penalty
+                 penaltyRef.current = 0; // Reset penalty streak on correct eat
                  setTimeout(() => nextQuestion(), 0);
              } else {
-                 playTone('wrong');
-                 setScore(s => Math.max(0, s - 5));
-                 
-                 // Remove only the hit food
-                 const remainingFoods = currentFoods.filter(f => f !== hitFood);
-                 foodsRef.current = remainingFoods;
-                 setCurrentRound(prev => ({ ...prev, foods: remainingFoods }));
+                 // Ate wrong food
+                 const survived = handlePenalty();
+                 if (!survived) return;
+                 // If survived, we basically skip the move update because the round reset
+                 return;
              }
         }
 
         const newSnake = [newHead, ...snakeRef.current];
         
-        if (wallHit) {
-             if (newSnake.length > 2) {
-                 newSnake.pop(); 
-                 newSnake.pop(); 
-             } else {
-                 if (newSnake.length > 1) newSnake.pop();
-                 else {
-                     setGameState(GameState.GAME_OVER);
-                     playTone('gameover');
-                     return;
-                 }
-             }
-        } else if (!ate) {
-            newSnake.pop(); 
-            
-            if (hitFood && !hitFood.correct) {
-                if (newSnake.length > 1) {
-                    newSnake.pop();
-                } else {
-                     setGameState(GameState.GAME_OVER);
-                     playTone('gameover');
-                     return;
-                }
-            }
-        }
-
-        if (newSnake.length === 0) {
-            setGameState(GameState.GAME_OVER);
-            playTone('gameover');
-            return;
+        if (ateCorrect) {
+            // Grow (don't pop)
+        } else {
+            newSnake.pop(); // Move normally
         }
 
         snakeRef.current = newSnake;
         setSnake(newSnake);
       }
-
       gameLoopRef.current = requestAnimationFrame(loop);
     };
 
     gameLoopRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(gameLoopRef.current);
-  }, [gameState, nextQuestion, playTone]);
+  }, [gameState, nextQuestion, playTone, score]); // score is dependency for penalty calculation
 
   useEffect(() => {
     if (gameState !== GameState.PLAYING) return;
@@ -351,19 +298,9 @@ export const useSnakeGame = (isMuted: boolean = false) => {
   }, [gameState, playTone]);
 
   return {
-    gameState,
-    score,
-    timeLeft,
-    snake,
-    currentRound, 
-    foods: currentRound.foods, 
-    currentWord: currentRound.word, 
-    words,
-    setWords,
-    startGame,
-    pauseGame,
-    updateDirection,
-    setGameState,
+    gameState, score, timeLeft, snake, currentRound, 
+    foods: currentRound.foods, currentWord: currentRound.word, 
+    words, setWords, startGame, pauseGame, updateDirection, setGameState,
     snakeDirection: direction.current
   };
 };
