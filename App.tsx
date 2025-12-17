@@ -171,11 +171,11 @@ function App() {
 
   if (showIntro) {
     return (
-      <div className="flex flex-col h-[100dvh] w-full items-center justify-center bg-[#E8E5DA] text-ink p-6 select-none font-serif relative overflow-hidden">
+      <div className="flex flex-col h-[100dvh] w-full items-center justify-between bg-[#E8E5DA] text-ink p-4 sm:p-6 select-none font-serif relative overflow-hidden">
         {/* Background Particles */}
         <ParticleBackground />
 
-        {/* Existing Mute Button */}
+        {/* Mute Button */}
         <button 
           onClick={() => setIsMuted(!isMuted)}
           className="absolute top-4 right-4 p-2 bg-white/20 hover:bg-white/40 backdrop-blur-md rounded-full transition-colors z-20 text-xl border border-white/30"
@@ -183,56 +183,59 @@ function App() {
           {isMuted ? '🔇' : '🔊'}
         </button>
 
-        <div className="max-w-md w-full text-center space-y-10 animate-fade-in z-10">
+        <div className="flex-1 flex flex-col items-center justify-center w-full max-w-md gap-6 z-10 min-h-0">
           
-          {/* Header Section */}
-          <div className="space-y-6">
-            <h1 className="text-5xl md:text-7xl font-bold text-ink tracking-tight font-serif drop-shadow-sm">
+          {/* Header Section - Compact on mobile */}
+          <div className="flex flex-col items-center gap-2 sm:gap-6 shrink-0">
+            <h1 className="text-4xl sm:text-7xl font-bold text-ink tracking-tight font-serif drop-shadow-sm text-center leading-tight">
               iVocab <br/> <span className="text-olive italic">Hungry Snake</span>
             </h1>
             
-            <div className="space-y-3">
-              <div className="inline-block px-4 py-1 rounded-full border border-olive/30 bg-olive/5 backdrop-blur-sm">
-                <p className="text-xs font-bold text-olive uppercase tracking-[0.2em]">
+            <div className="flex flex-col items-center gap-2 sm:gap-3">
+              <div className="inline-block px-3 py-1 rounded-full border border-olive/30 bg-olive/5 backdrop-blur-sm">
+                <p className="text-[10px] sm:text-xs font-bold text-olive uppercase tracking-[0.2em]">
                   Developed by Shirley Du
                 </p>
               </div>
-              <div className="flex flex-col items-center gap-1 opacity-70">
-                 <span className="text-sm font-serif italic text-ink">Designed for GSAT & CAP Vocab</span>
-                 <span className="text-xs font-sans uppercase tracking-widest text-tan font-bold">Mobile-Friendly</span>
+              <div className="flex flex-col items-center gap-0.5 sm:gap-1 opacity-70">
+                 <span className="text-xs sm:text-sm font-serif italic text-ink">Designed for GSAT & CAP Vocab</span>
+                 <span className="text-[10px] sm:text-xs font-sans uppercase tracking-widest text-tan font-bold">Mobile-Friendly</span>
               </div>
             </div>
           </div>
           
-          {/* Icon Animation */}
-          <div className="relative h-32 flex items-center justify-center">
+          {/* Icon Animation - Smaller on mobile */}
+          <div className="relative h-20 sm:h-32 flex items-center justify-center shrink-0">
              <div className="absolute inset-0 bg-olive/20 blur-3xl rounded-full animate-pulse"></div>
-             <div className="text-7xl md:text-8xl animate-[bounce_3s_infinite] drop-shadow-2xl z-10">🐍</div>
-             <div className="absolute text-5xl md:text-6xl animate-[bounce_3s_infinite] delay-100 translate-x-12 translate-y-4 opacity-90 z-0">🍞</div>
+             <div className="text-6xl sm:text-8xl animate-[bounce_3s_infinite] drop-shadow-2xl z-10">🐍</div>
+             <div className="absolute text-4xl sm:text-6xl animate-[bounce_3s_infinite] delay-100 translate-x-8 sm:translate-x-12 translate-y-2 sm:translate-y-4 opacity-90 z-0">🍞</div>
           </div>
           
-          {/* Artistic Instruction Panel - Glowing */}
-          <div className="relative group">
+          {/* Artistic Instruction Panel - Reduced padding on mobile */}
+          <div className="relative group w-full shrink-0">
             <div className="absolute -inset-1 bg-gradient-to-r from-olive/40 via-tan/40 to-olive/40 rounded-2xl blur opacity-50 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
-            <div className="relative bg-white/40 backdrop-blur-xl p-8 rounded-2xl border border-white/60 shadow-[0_0_15px_rgba(255,255,255,0.3)] text-ink">
-              <p className="text-lg md:text-xl font-serif italic leading-relaxed text-ink/90">
+            <div className="relative bg-white/40 backdrop-blur-xl p-5 sm:p-8 rounded-2xl border border-white/60 shadow-[0_0_15px_rgba(255,255,255,0.3)] text-ink text-center">
+              <p className="text-base sm:text-xl font-serif italic leading-relaxed text-ink/90">
                 "Guide the serpent to the <span className="font-bold text-olive">Bread of Knowledge</span>."
               </p>
-              <div className="mt-4 flex flex-col gap-1 text-sm font-sans opacity-70">
+              <div className="mt-2 sm:mt-4 flex flex-col gap-0.5 sm:gap-1 text-xs sm:text-sm font-sans opacity-70">
                  <span>Set feeding time. Choose difficulty.</span>
                  <span>Eat right to grow.</span>
               </div>
             </div>
           </div>
+
+        </div>
           
-          {/* Button */}
+        {/* Button - Separated to bottom for safe area visibility */}
+        <div className="w-full max-w-md z-10 pb-4 sm:pb-0 shrink-0">
           <button 
             onClick={() => { setShowIntro(false); setShowConfig(true); }}
-            className="group relative w-full py-4 px-8 rounded-full overflow-hidden shadow-2xl transition-all hover:-translate-y-1 active:scale-95"
+            className="group relative w-full py-3 sm:py-4 px-8 rounded-full overflow-hidden shadow-2xl transition-all hover:-translate-y-1 active:scale-95"
           >
             <div className="absolute inset-0 bg-gradient-to-r from-olive to-[#8B9D88] transition-all group-hover:scale-105"></div>
             <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <span className="relative text-xl font-bold text-white tracking-widest uppercase flex items-center justify-center gap-2">
+            <span className="relative text-lg sm:text-xl font-bold text-white tracking-widest uppercase flex items-center justify-center gap-2">
                Enter Game <span className="group-hover:translate-x-1 transition-transform">→</span>
             </span>
           </button>
