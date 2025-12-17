@@ -234,71 +234,75 @@ export const useSnakeGame = (isMuted: boolean = false) => {
         };
 
         const isInvincibleNow = time < invincibleUntilRef.current;
+        let shouldMove = true;
 
         // --- Collision Check (Wall or Self) ---
-        let collision = false;
         
         // Wall
         if (newHead.x < 0 || newHead.x >= GRID_SIZE || newHead.y < 0 || newHead.y >= GRID_SIZE) {
             if (isInvincibleNow) {
                 // If invincible, just stop moving at the wall, don't die
-                return; 
+                shouldMove = false;
+            } else {
+                const survived = handlePenalty();
+                if (!survived) return; // Exit loop, game over
+                shouldMove = false;
             }
-            collision = true;
         }
         // Self
         else if (snakeRef.current.some((p, i) => i > 0 && p.x === newHead.x && p.y === newHead.y)) {
              if (isInvincibleNow) {
-                 // If invincible, pass through self (do nothing)
+                 // If invincible, pass through self (do nothing special, just move)
              } else {
-                 collision = true;
-             }
-        }
-
-        if (collision) {
-             handlePenalty();
-             return; // Don't move if we hit something, wait for next round or game over
-        }
-
-        // --- Movement & Eating ---
-        const currentFoods = foodsRef.current;
-        const hitFood = currentFoods.find(f => f.x === newHead.x && f.y === newHead.y);
-
-        let ateCorrect = false;
-
-        if (hitFood) {
-             if (hitFood.correct) {
-                 ateCorrect = true;
-                 playTone('correct');
-                 setScore(s => s + 10 + (penaltyRef.current > 0 ? 0 : 5)); // Bonus if no penalty
-                 penaltyRef.current = 0; // Reset penalty streak on correct eat
-                 
-                 // Trigger Invincibility for 1 second
-                 invincibleUntilRef.current = time + 1000;
-                 setIsInvincible(true);
-                 if (invincibleTimerRef.current) clearTimeout(invincibleTimerRef.current);
-                 invincibleTimerRef.current = setTimeout(() => setIsInvincible(false), 1000);
-
-                 setTimeout(() => nextQuestion(), 0);
-             } else {
-                 // Ate wrong food
                  const survived = handlePenalty();
-                 if (!survived) return;
-                 // If survived, we basically skip the move update because the round reset
-                 return;
+                 if (!survived) return; // Exit loop, game over
+                 shouldMove = false;
              }
         }
 
-        const newSnake = [newHead, ...snakeRef.current];
-        
-        if (ateCorrect) {
-            // Grow (don't pop)
-        } else {
-            newSnake.pop(); // Move normally
+        if (shouldMove) {
+            // --- Movement & Eating ---
+            const currentFoods = foodsRef.current;
+            const hitFood = currentFoods.find(f => f.x === newHead.x && f.y === newHead.y);
+    
+            let ateCorrect = false;
+    
+            if (hitFood) {
+                 if (hitFood.correct) {
+                     ateCorrect = true;
+                     playTone('correct');
+                     setScore(s => s + 10 + (penaltyRef.current > 0 ? 0 : 5)); // Bonus if no penalty
+                     penaltyRef.current = 0; // Reset penalty streak on correct eat
+                     
+                     // Trigger Invincibility for 1 second
+                     invincibleUntilRef.current = time + 1000;
+                     setIsInvincible(true);
+                     if (invincibleTimerRef.current) clearTimeout(invincibleTimerRef.current);
+                     invincibleTimerRef.current = setTimeout(() => setIsInvincible(false), 1000);
+    
+                     setTimeout(() => nextQuestion(), 0);
+                 } else {
+                     // Ate wrong food
+                     const survived = handlePenalty();
+                     if (!survived) return; // Exit loop, game over
+                     // Don't move if penalty happened (snake might have shrunk/reset)
+                     // But we want to process the penalty effect visually immediately? 
+                     // handlePenalty already updated state.
+                     return; // Skip rest of this tick
+                 }
+            }
+    
+            const newSnake = [newHead, ...snakeRef.current];
+            
+            if (ateCorrect) {
+                // Grow (don't pop)
+            } else {
+                newSnake.pop(); // Move normally
+            }
+    
+            snakeRef.current = newSnake;
+            setSnake(newSnake);
         }
-
-        snakeRef.current = newSnake;
-        setSnake(newSnake);
       }
       gameLoopRef.current = requestAnimationFrame(loop);
     };
