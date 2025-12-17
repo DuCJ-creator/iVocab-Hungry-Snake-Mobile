@@ -22,10 +22,9 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ snake, foods, gridSize }) => {
   // Initialize visual snake on first load or reset
   useEffect(() => {
     if (visualSnakeRef.current.length === 0 || visualSnakeRef.current.length !== snake.length) {
-       // Deep copy to avoid referencing the prop directly if we were mutating (we aren't, but safety)
        visualSnakeRef.current = snake.map(p => ({ x: p.x, y: p.y }));
     }
-  }, [snake.length]); // Only reset if length changes significantly (respawn) logic handled inside loop
+  }, [snake.length]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -38,21 +37,60 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ snake, foods, gridSize }) => {
       const dpr = window.devicePixelRatio || 1;
       const rect = canvas.getBoundingClientRect();
       
-      // Check if we need to resize canvas buffer
+      // Resize buffer if needed
       if (canvas.width !== rect.width * dpr || canvas.height !== rect.height * dpr) {
          canvas.width = rect.width * dpr;
          canvas.height = rect.height * dpr;
-         ctx.scale(dpr, dpr);
+      }
+      
+      // Reset transform to identity before calculations
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, rect.width, rect.height);
+
+      // --- CALCULATE SQUARE PLAY AREA ---
+      // Determine the largest square that fits in the canvas
+      const size = Math.min(rect.width, rect.height);
+      const offsetX = (rect.width - size) / 2;
+      const offsetY = (rect.height - size) / 2;
+      const cellSize = size / gridSize;
+
+      // Translate context to center the grid
+      ctx.translate(offsetX, offsetY);
+
+      // --- GLASS BOARD BACKGROUND (Square Only) ---
+      // Clip to the playable area to prevent "phantom space"
+      ctx.beginPath();
+      ctx.rect(0, 0, size, size);
+      ctx.clip();
+
+      const bgGradient = ctx.createLinearGradient(0, 0, size, size);
+      bgGradient.addColorStop(0, 'rgba(255, 255, 255, 0.15)');
+      bgGradient.addColorStop(1, 'rgba(255, 255, 255, 0.05)');
+      ctx.fillStyle = bgGradient;
+      ctx.fillRect(0, 0, size, size);
+
+      // Glass Grid
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= gridSize; i++) {
+        // Vertical
+        ctx.beginPath();
+        ctx.moveTo(i * cellSize, 0);
+        ctx.lineTo(i * cellSize, size);
+        ctx.stroke();
+        // Horizontal
+        ctx.beginPath();
+        ctx.moveTo(0, i * cellSize);
+        ctx.lineTo(size, i * cellSize);
+        ctx.stroke();
       }
 
-      // 1. Interpolate Snake Positions for Smoothness
-      // We want the visual segments to move towards the logical 'snake' prop positions
+      // --- UPDATE SNAKE INTERPOLATION ---
       if (visualSnakeRef.current.length !== snake.length) {
-          // If length mismatch (grew or shrank), simpler to just snap or adjust array
           visualSnakeRef.current = snake.map(p => ({x: p.x, y: p.y}));
       } else {
-          // Lerp each segment
-          // The head needs to be responsive, body follows
+          // Reset to 0.25 to match 300ms speed for smooth continuous movement
           const smoothSpeed = 0.25; 
           visualSnakeRef.current = visualSnakeRef.current.map((v, i) => ({
               x: lerp(v.x, snake[i].x, smoothSpeed),
@@ -60,106 +98,65 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ snake, foods, gridSize }) => {
           }));
       }
 
-      const cellSize = rect.width / gridSize;
-      
-      // Clear Canvas
-      ctx.clearRect(0, 0, rect.width, rect.height);
-
-      // --- GLASS BOARD BACKGROUND ---
-      // Subtle gradient background
-      const bgGradient = ctx.createLinearGradient(0, 0, rect.width, rect.height);
-      bgGradient.addColorStop(0, 'rgba(255, 255, 255, 0.15)');
-      bgGradient.addColorStop(1, 'rgba(255, 255, 255, 0.05)');
-      ctx.fillStyle = bgGradient;
-      ctx.fillRect(0, 0, rect.width, rect.height);
-
-      // Glass Grid (Very subtle white lines)
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-      ctx.lineWidth = 1;
-      for (let i = 0; i <= gridSize; i++) {
-        ctx.beginPath();
-        ctx.moveTo(i * cellSize, 0);
-        ctx.lineTo(i * cellSize, rect.height);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(0, i * cellSize);
-        ctx.lineTo(rect.width, i * cellSize);
-        ctx.stroke();
-      }
-
       // --- FOOD (BREAD) ---
-      // Bigger size for readability
       foods.forEach(f => {
         const cx = (f.x + 0.5) * cellSize;
         const cy = (f.y + 0.5) * cellSize;
-        // Increase size: from 0.9 to 1.1 of cell (slight overlap is fine for organic feel)
         const size = cellSize * 1.1; 
 
         ctx.save();
         
-        // Shadow for depth
+        // Shadow
         ctx.shadowColor = 'rgba(0,0,0,0.1)';
         ctx.shadowBlur = 10;
         ctx.shadowOffsetY = 4;
 
         // Bread Shape
         ctx.beginPath();
-        // Slightly bigger ellipse
         ctx.ellipse(cx, cy, size * 0.45, size * 0.35, 0, 0, Math.PI * 2);
         
         // Glassy Bread Fill
-        // Use a gradient to make it look 3D/Glassy but with bread colors
         const breadGrad = ctx.createRadialGradient(cx - size*0.1, cy - size*0.1, size*0.1, cx, cy, size*0.5);
-        breadGrad.addColorStop(0, 'rgba(240, 230, 210, 0.95)'); // Light center
-        breadGrad.addColorStop(1, 'rgba(216, 196, 168, 0.9)'); // Darker edge
+        breadGrad.addColorStop(0, 'rgba(240, 230, 210, 0.95)'); 
+        breadGrad.addColorStop(1, 'rgba(216, 196, 168, 0.9)'); 
         ctx.fillStyle = breadGrad;
         ctx.fill();
 
-        // Rim/Stroke
+        // Rim
         ctx.lineWidth = 2;
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)'; // Glassy rim
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)'; 
         ctx.stroke();
         
-        // Shine highlight
+        // Highlight
         ctx.beginPath();
         ctx.ellipse(cx - size*0.15, cy - size*0.15, size * 0.1, size * 0.06, -0.5, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
         ctx.fill();
 
-        ctx.restore(); // Clear shadows
+        ctx.restore();
 
-        // Text - BIGGER and Clearer
-        ctx.fillStyle = '#3E2723'; // Darker Brown for contrast
-        // Increased font size
+        // Text (No Truncation)
+        ctx.fillStyle = '#3E2723'; 
         const fontSize = Math.floor(cellSize * 0.35); 
         ctx.font = `bold ${fontSize}px "Georgia", serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         
-        const lines = f.meaning.split(/;|，/);
-        let text = lines[0];
-        // Only truncate if really long
-        if (text.length > 5) {
-             // Try to fit it by scaling down slightly if needed, or just truncate
-             if (text.length > 8) text = text.substring(0, 6) + '..';
-        }
-        ctx.fillText(text, cx, cy);
+        // Allow text to overflow
+        ctx.fillText(f.meaning, cx, cy);
       });
 
       // --- SNAKE (GLASS STYLE) ---
-      // Draw from tail to head
       for (let i = visualSnakeRef.current.length - 1; i >= 0; i--) {
           const segment = visualSnakeRef.current[i];
           const cx = (segment.x + 0.5) * cellSize;
           const cy = (segment.y + 0.5) * cellSize;
           const isHead = i === 0;
 
-          // Snake Segment
           const radius = cellSize * (isHead ? 0.48 : 0.45);
           
           ctx.save();
           
-          // Glassy Body Gradient
           const snakeGrad = ctx.createRadialGradient(cx - radius*0.3, cy - radius*0.3, 0, cx, cy, radius);
           if (isHead) {
               snakeGrad.addColorStop(0, 'rgba(255, 200, 200, 0.9)');
@@ -174,37 +171,26 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ snake, foods, gridSize }) => {
           ctx.fillStyle = snakeGrad;
           ctx.fill();
 
-          // Glass Rim
           ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
           ctx.lineWidth = 2;
           ctx.stroke();
 
-          // Highlight (Gloss)
           ctx.beginPath();
           ctx.arc(cx - radius*0.3, cy - radius*0.3, radius * 0.2, 0, Math.PI * 2);
           ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
           ctx.fill();
 
-          // Head details (Eyes)
           if (isHead && visualSnakeRef.current.length > 1) {
-             // Calculate direction from head to second segment for eye positioning
              const second = visualSnakeRef.current[1];
              const dx = segment.x - second.x;
              const dy = segment.y - second.y;
-             
-             // Normalize vector roughly
              const angle = Math.atan2(dy, dx);
              
              const eyeOffset = radius * 0.5;
-             const eyeSpacing = radius * 0.4;
-             
-             // Left Eye
              const ex1 = cx + Math.cos(angle - 0.5) * eyeOffset;
              const ey1 = cy + Math.sin(angle - 0.5) * eyeOffset;
-             // Right Eye
              const ex2 = cx + Math.cos(angle + 0.5) * eyeOffset;
              const ey2 = cy + Math.sin(angle + 0.5) * eyeOffset;
-
              const eyeSize = radius * 0.25;
 
              ctx.fillStyle = 'white';
@@ -223,10 +209,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ snake, foods, gridSize }) => {
     };
 
     reqIdRef.current = requestAnimationFrame(render);
-    
-    return () => {
-        cancelAnimationFrame(reqIdRef.current);
-    };
+    return () => cancelAnimationFrame(reqIdRef.current);
   }, [snake, foods, gridSize]);
 
   return (

@@ -46,7 +46,6 @@ function App() {
 
   const handleTouchMove = (e: React.TouchEvent) => {
       if (gameState !== GameState.PLAYING || !joystickStart.current) return;
-      // e.preventDefault(); // Sometimes needed to prevent scrolling, but 'touch-none' class handles it usually
 
       const currentX = e.touches[0].clientX;
       const currentY = e.touches[0].clientY;
@@ -55,19 +54,14 @@ function App() {
       
       const threshold = 15; // Lower threshold for high responsiveness ("silk smooth")
 
-      // Calculate distance
       const dist = Math.sqrt(dx*dx + dy*dy);
       
       if (dist > threshold) {
-          // Determine dominant axis
           if (Math.abs(dx) > Math.abs(dy)) {
               updateDirection({ x: dx > 0 ? 1 : -1, y: 0 });
           } else {
               updateDirection({ x: 0, y: dy > 0 ? 1 : -1 });
           }
-          // Optional: Reset start point continuously for "follow" effect? 
-          // No, keep anchor for D-pad feel, or reset for "relative" feel. 
-          // Resetting makes it feel like you are "dragging" the snake. Let's try resetting.
           joystickStart.current = { x: currentX, y: currentY };
       }
   };
@@ -204,7 +198,7 @@ function App() {
           </button>
       </div>
 
-      {/* Main Game Board Area - MAXIMIZED, NO SPACE */}
+      {/* Main Game Board Area - MAXIMIZED */}
       <div className="flex-1 w-full relative flex flex-col min-h-0">
         <div 
           className="flex-1 relative w-full overflow-hidden bg-white/20"
@@ -212,9 +206,9 @@ function App() {
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-             {/* The Canvas container fills the flex area */}
+             {/* The Canvas container fills the flex area, but we limit the inner div to be square */}
              <div className="absolute inset-0 flex items-center justify-center p-2">
-                 <div className="relative w-full h-full max-w-[600px] max-h-[600px] aspect-square shadow-2xl rounded-2xl border border-white/50 overflow-hidden bg-white/10 backdrop-blur-sm">
+                 <div className="relative max-w-full max-h-full aspect-square w-auto h-auto shadow-2xl rounded-2xl border border-white/50 overflow-hidden bg-white/10 backdrop-blur-sm">
                     <GameCanvas snake={snake} foods={foods} gridSize={GRID_SIZE} />
                  </div>
              </div>
@@ -273,7 +267,7 @@ function App() {
 
                 {/* Right Column: Direction Panel + Actions */}
                 <div className="flex flex-col gap-2">
-                    {/* D-Pad Area (Visual only mostly, since touch is on board, but functional for clicks) */}
+                    {/* D-Pad Area */}
                     <div className="flex-1 bg-white/40 rounded-2xl border border-white/50 p-2 relative shadow-lg">
                         <div className="absolute inset-0 flex flex-col items-center justify-center">
                             <button 
