@@ -48,8 +48,7 @@ const ParticleBackground: React.FC = () => {
         if (!ctx) return;
         ctx.save();
         ctx.globalAlpha = this.alpha;
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = this.color;
+        // OPTIMIZATION: Removed shadowBlur here as it's very expensive on mobile
         ctx.fillStyle = this.color;
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
@@ -62,7 +61,8 @@ const ParticleBackground: React.FC = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
       particles = [];
-      const numberOfParticles = Math.min(80, (canvas.width * canvas.height) / 10000);
+      // OPTIMIZATION: Reduced max particles from 80 to 30 for mobile performance
+      const numberOfParticles = Math.min(30, (canvas.width * canvas.height) / 15000);
       for (let i = 0; i < numberOfParticles; i++) {
         particles.push(new Particle());
       }

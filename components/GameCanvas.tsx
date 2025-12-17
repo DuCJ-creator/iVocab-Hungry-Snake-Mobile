@@ -29,7 +29,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ snake, foods, gridSize }) => {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: false }); // Optimize for no transparency on canvas itself if possible, though we need transparency for layers
     if (!ctx) return;
 
     const render = () => {
@@ -73,18 +73,16 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ snake, foods, gridSize }) => {
       // Glass Grid
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
       ctx.lineWidth = 1;
+      ctx.beginPath(); // Batch grid drawing
       for (let i = 0; i <= gridSize; i++) {
         // Vertical
-        ctx.beginPath();
         ctx.moveTo(i * cellSize, 0);
         ctx.lineTo(i * cellSize, sizeRect);
-        ctx.stroke();
         // Horizontal
-        ctx.beginPath();
         ctx.moveTo(0, i * cellSize);
         ctx.lineTo(sizeRect, i * cellSize);
-        ctx.stroke();
       }
+      ctx.stroke();
 
       // --- WALL BORDER (VISIBLE) ---
       ctx.save();
@@ -118,13 +116,14 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ snake, foods, gridSize }) => {
         // INCREASED SIZE from 1.1 to 1.4 for better visibility
         const size = cellSize * 1.4; 
 
+        // PERFORMANCE OPTIMIZATION: Manually draw shadow instead of using ctx.shadowBlur
+        ctx.fillStyle = 'rgba(0,0,0,0.1)';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + 4, size * 0.45, size * 0.35, 0, 0, Math.PI * 2);
+        ctx.fill();
+
         ctx.save();
         
-        // Shadow
-        ctx.shadowColor = 'rgba(0,0,0,0.1)';
-        ctx.shadowBlur = 10;
-        ctx.shadowOffsetY = 4;
-
         // Bread Shape
         ctx.beginPath();
         ctx.ellipse(cx, cy, size * 0.45, size * 0.35, 0, 0, Math.PI * 2);
@@ -171,6 +170,9 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ snake, foods, gridSize }) => {
           const radius = cellSize * (isHead ? 0.48 : 0.45);
           
           ctx.save();
+          
+          // Pre-calculate gradient to avoid recreating if possible, but per-segment is tricky
+          // Optimized: Removed shadowBlur on snake segments
           
           const snakeGrad = ctx.createRadialGradient(cx - radius*0.3, cy - radius*0.3, 0, cx, cy, radius);
           if (isHead) {
