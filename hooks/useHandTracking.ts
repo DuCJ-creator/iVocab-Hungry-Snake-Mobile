@@ -16,12 +16,19 @@ export const useHandTracking = (videoElement: HTMLVideoElement | null, enabled: 
   const cameraRef = useRef<any>(null);
 
   useEffect(() => {
+    // Cleanup if disabled or video element removed
     if (!enabled || !videoElement) {
       if (cameraRef.current) {
         cameraRef.current.stop();
         cameraRef.current = null;
       }
       setIsCameraReady(false);
+      setFingerPosition(null);
+      return;
+    }
+
+    if (!window.Hands || !window.Camera) {
+      console.warn("MediaPipe scripts not loaded yet.");
       return;
     }
 
@@ -32,7 +39,7 @@ export const useHandTracking = (videoElement: HTMLVideoElement | null, enabled: 
         // Index finger tip is landmark 8
         const indexTip = landmarks[8];
         
-        // Mirror X coordinate because webcam is mirrored
+        // Mirror X coordinate because webcam is usually mirrored
         setFingerPosition({
           x: 1 - indexTip.x, 
           y: indexTip.y
@@ -77,6 +84,10 @@ export const useHandTracking = (videoElement: HTMLVideoElement | null, enabled: 
     return () => {
       if (cameraRef.current) {
         cameraRef.current.stop();
+        cameraRef.current = null;
+      }
+      if (handsRef.current) {
+         handsRef.current.close();
       }
     };
   }, [enabled, videoElement]);

@@ -210,7 +210,7 @@ export const useSnakeGame = (isMuted: boolean = false) => {
       const dt = time - lastTimeRef.current;
       lastTimeRef.current = time;
       
-      // Speed logic: Faster base speed (300ms) and accelerates to 100ms
+      // Speed logic: Start at 300ms, max speed 100ms
       const speed = Math.max(100, 300 - Math.floor(score / 50) * 10);
       
       moveAccumulator.current += dt;

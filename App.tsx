@@ -1,17 +1,26 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSnakeGame } from './hooks/useSnakeGame';
+import { useHandTracking } from './hooks/useHandTracking';
 import GameCanvas from './components/GameCanvas';
+import ParticleBackground from './components/ParticleBackground';
 import { GameState, WordItem } from './types';
 
 const GRID_SIZE = 12; 
-const LEVEL_CSVS: Record<number, string> = {
-  1: "https://ducj-creator.github.io/iVocab-Self-Practice/level1.csv",
-  2: "https://ducj-creator.github.io/iVocab-Self-Practice/level2.csv",
-  3: "https://ducj-creator.github.io/iVocab-Self-Practice/level3.csv",
-  4: "https://ducj-creator.github.io/iVocab-Self-Practice/level4.csv",
-  5: "https://ducj-creator.github.io/iVocab-Self-Practice/level5.csv",
-  6: "https://ducj-creator.github.io/iVocab-Self-Practice/level6.csv",
+const LEVEL_CSVS: Record<string, string> = {
+  "1": "https://ducj-creator.github.io/iVocab-Self-Practice/level1.csv",
+  "2": "https://ducj-creator.github.io/iVocab-Self-Practice/level2.csv",
+  "3": "https://ducj-creator.github.io/iVocab-Self-Practice/level3.csv",
+  "4": "https://ducj-creator.github.io/iVocab-Self-Practice/level4.csv",
+  "5": "https://ducj-creator.github.io/iVocab-Self-Practice/level5.csv",
+  "6": "https://ducj-creator.github.io/iVocab-Self-Practice/level6.csv",
+  "C1": "https://ducj-creator.github.io/iVocab-Self-Practice/CAP1C.csv",
+  "C2": "https://ducj-creator.github.io/iVocab-Self-Practice/CAP2D.csv",
+  "C3": "https://ducj-creator.github.io/iVocab-Self-Practice/CAP3H.csv",
+  "C4": "https://ducj-creator.github.io/iVocab-Self-Practice/CAP4T.csv",
 };
+
+const LEVELS = ["1", "2", "3", "4", "5", "6", "C1", "C2", "C3", "C4"];
+const CAP_LEVELS = ["C1", "C2", "C3", "C4"];
 
 const UNIT_RANGES = [[1,5],[6,10],[11,15],[16,20],[21,25],[26,30],[31,35],[36,40],[41,45],[46,50]];
 
@@ -30,16 +39,40 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState("");
   const [showConfig, setShowConfig] = useState(false); 
-  const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
+  const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
   const [selectedRange, setSelectedRange] = useState<number[] | null>(null);
   const [gameDuration, setGameDuration] = useState(10); 
 
+  // --- CAMERA / HAND TRACKING ---
+  const [isCameraMode, setIsCameraMode] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const { fingerPosition, isCameraReady } = useHandTracking(videoRef.current, isCameraMode);
+
+  // Control Snake with Finger
+  useEffect(() => {
+    if (!isCameraMode || !fingerPosition || gameState !== GameState.PLAYING) return;
+
+    // Center is (0.5, 0.5)
+    // We determine direction based on deviation from center
+    const dx = fingerPosition.x - 0.5;
+    const dy = fingerPosition.y - 0.5;
+    const deadZone = 0.1; // 10% movement required to trigger turn
+
+    if (Math.abs(dx) < deadZone && Math.abs(dy) < deadZone) return;
+
+    // Move in the dominant axis
+    if (Math.abs(dx) > Math.abs(dy)) {
+        updateDirection({ x: dx > 0 ? 1 : -1, y: 0 });
+    } else {
+        updateDirection({ x: 0, y: dy > 0 ? 1 : -1 });
+    }
+  }, [fingerPosition, isCameraMode, gameState, updateDirection]);
+
+
   // --- JOYSTICK TOUCH CONTROLS ---
-  // To provide "silk smooth" feel, we detect dragging from the initial touch point
   const joystickStart = useRef<{x: number, y: number} | null>(null);
   
   const handleTouchStart = (e: React.TouchEvent) => {
-    // Only capture 1 finger
     if (e.touches.length !== 1) return;
     joystickStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
   };
@@ -52,7 +85,7 @@ function App() {
       const dx = currentX - joystickStart.current.x;
       const dy = currentY - joystickStart.current.y;
       
-      const threshold = 15; // Lower threshold for high responsiveness ("silk smooth")
+      const threshold = 15; 
 
       const dist = Math.sqrt(dx*dx + dy*dy);
       
@@ -88,6 +121,14 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [gameState, pauseGame, updateDirection]);
 
+  // Handle Level Selection with validation
+  const handleLevelSelect = (lvl: string) => {
+    setSelectedLevel(lvl);
+    // If switching to a CAP level (C1-C4) and current range starts > 25, reset the range
+    if (CAP_LEVELS.includes(lvl) && selectedRange && selectedRange[0] > 25) {
+      setSelectedRange(null);
+    }
+  };
 
   const handleLoadCSV = async () => {
     if (!selectedLevel || !selectedRange) return;
@@ -130,56 +171,84 @@ function App() {
 
   if (showIntro) {
     return (
-      <div className="flex flex-col h-[100dvh] w-full items-center justify-center bg-paper text-ink p-6 select-none font-serif relative overflow-hidden">
+      <div className="flex flex-col h-[100dvh] w-full items-center justify-center bg-[#E8E5DA] text-ink p-6 select-none font-serif relative overflow-hidden">
+        {/* Background Particles */}
+        <ParticleBackground />
+
+        {/* Existing Mute Button */}
         <button 
           onClick={() => setIsMuted(!isMuted)}
-          className="absolute top-4 right-4 p-2 bg-tan/20 rounded-full hover:bg-tan/40 transition-colors"
+          className="absolute top-4 right-4 p-2 bg-white/20 hover:bg-white/40 backdrop-blur-md rounded-full transition-colors z-20 text-xl border border-white/30"
         >
           {isMuted ? '🔇' : '🔊'}
         </button>
 
-        <div className="max-w-md w-full text-center space-y-8 animate-fade-in z-10">
-          <div className="space-y-4">
-            <h1 className="text-4xl md:text-6xl font-bold text-ink tracking-tight font-serif">
-              iVocab Hungry Snake
+        <div className="max-w-md w-full text-center space-y-10 animate-fade-in z-10">
+          
+          {/* Header Section */}
+          <div className="space-y-6">
+            <h1 className="text-5xl md:text-7xl font-bold text-ink tracking-tight font-serif drop-shadow-sm">
+              iVocab <br/> <span className="text-olive italic">Hungry Snake</span>
             </h1>
-            <p className="text-sm font-bold text-olive uppercase tracking-widest">
-              Developed by Shirley Du
-            </p>
+            
+            <div className="space-y-3">
+              <div className="inline-block px-4 py-1 rounded-full border border-olive/30 bg-olive/5 backdrop-blur-sm">
+                <p className="text-xs font-bold text-olive uppercase tracking-[0.2em]">
+                  Developed by Shirley Du
+                </p>
+              </div>
+              <div className="flex flex-col items-center gap-1 opacity-70">
+                 <span className="text-sm font-serif italic text-ink">Designed for GSAT & CAP Vocab</span>
+                 <span className="text-xs font-sans uppercase tracking-widest text-tan font-bold">Mobile-Friendly</span>
+              </div>
+            </div>
           </div>
           
-          <div className="text-6xl md:text-8xl py-4 animate-bounce">🐍 🍞</div>
-          
-          <div className="bg-white/40 backdrop-blur-md p-6 rounded-2xl border border-white/50 shadow-xl">
-            <p className="text-base md:text-lg text-ink/90 leading-relaxed font-sans">
-              Guide the hungry snake to the bread with the correct chinese meaning. 
-              <br/>
-              Set the feeding time, choose the difficulty level and the units range; 
-              <br/>
-              Eat right to grow and score.
-            </p>
+          {/* Icon Animation */}
+          <div className="relative h-32 flex items-center justify-center">
+             <div className="absolute inset-0 bg-olive/20 blur-3xl rounded-full animate-pulse"></div>
+             <div className="text-7xl md:text-8xl animate-[bounce_3s_infinite] drop-shadow-2xl z-10">🐍</div>
+             <div className="absolute text-5xl md:text-6xl animate-[bounce_3s_infinite] delay-100 translate-x-12 translate-y-4 opacity-90 z-0">🍞</div>
           </div>
           
+          {/* Artistic Instruction Panel - Glowing */}
+          <div className="relative group">
+            <div className="absolute -inset-1 bg-gradient-to-r from-olive/40 via-tan/40 to-olive/40 rounded-2xl blur opacity-50 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+            <div className="relative bg-white/40 backdrop-blur-xl p-8 rounded-2xl border border-white/60 shadow-[0_0_15px_rgba(255,255,255,0.3)] text-ink">
+              <p className="text-lg md:text-xl font-serif italic leading-relaxed text-ink/90">
+                "Guide the serpent to the <span className="font-bold text-olive">Bread of Knowledge</span>."
+              </p>
+              <div className="mt-4 flex flex-col gap-1 text-sm font-sans opacity-70">
+                 <span>Set feeding time. Choose difficulty.</span>
+                 <span>Eat right to grow.</span>
+              </div>
+            </div>
+          </div>
+          
+          {/* Button */}
           <button 
             onClick={() => { setShowIntro(false); setShowConfig(true); }}
-            className="w-full bg-olive hover:bg-opacity-80 text-white text-xl font-bold py-4 rounded-full shadow-xl transform transition-all active:scale-95 hover:-translate-y-1"
+            className="group relative w-full py-4 px-8 rounded-full overflow-hidden shadow-2xl transition-all hover:-translate-y-1 active:scale-95"
           >
-            Enter Game
+            <div className="absolute inset-0 bg-gradient-to-r from-olive to-[#8B9D88] transition-all group-hover:scale-105"></div>
+            <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <span className="relative text-xl font-bold text-white tracking-widest uppercase flex items-center justify-center gap-2">
+               Enter Game <span className="group-hover:translate-x-1 transition-transform">→</span>
+            </span>
           </button>
         </div>
-
-        {/* Decorative Background Blobs for Glass effect */}
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-olive/20 rounded-full blur-[100px] pointer-events-none"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-head/20 rounded-full blur-[100px] pointer-events-none"></div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-[100dvh] w-full mx-auto font-sans touch-none select-none overflow-hidden overscroll-none relative bg-[#E0DDD5]">
+    <div className="flex flex-col sm:flex-row h-[100dvh] w-full mx-auto font-sans touch-none select-none overflow-hidden overscroll-none relative bg-[#E0DDD5]">
       
-      {/* Top HUD */}
-      <div className="w-full px-3 py-2 flex justify-between items-center z-30 shrink-0">
+      {/* Hidden Video Element for MediaPipe */}
+      <video ref={videoRef} className="hidden" playsInline muted></video>
+
+      {/* --- MOBILE HEADER (Hidden on Desktop) --- */}
+      <div className="sm:hidden w-full px-3 py-2 flex justify-between items-center z-30 shrink-0 bg-[#E0DDD5]/50 backdrop-blur-sm">
           <div className="bg-white/40 backdrop-blur-md px-4 py-2 rounded-full shadow-sm border border-white/40 flex gap-4">
              <div>
                 <span className="text-[10px] uppercase text-ink/60 font-bold block">Score</span>
@@ -190,122 +259,211 @@ function App() {
                 <span className="text-lg font-bold text-ink">{formatTime(timeLeft)}</span>
              </div>
           </div>
-          <button 
-            onClick={() => setIsMuted(!isMuted)}
-            className="p-2 bg-white/40 backdrop-blur-md rounded-full shadow-sm border border-white/40 text-lg"
-          >
-            {isMuted ? '🔇' : '🔊'}
-          </button>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => setIsMuted(!isMuted)}
+              className="p-2 bg-white/40 backdrop-blur-md rounded-full shadow-sm border border-white/40 text-lg"
+            >
+              {isMuted ? '🔇' : '🔊'}
+            </button>
+          </div>
       </div>
 
-      {/* Main Game Board Area - MAXIMIZED */}
-      <div className="flex-1 w-full relative flex flex-col min-h-0">
+      {/* --- MAIN GAME AREA --- */}
+      <div className="flex-1 relative w-full h-full overflow-hidden bg-white/20 order-1 sm:order-1 flex flex-col justify-center">
         <div 
-          className="flex-1 relative w-full overflow-hidden bg-white/20"
+          className="absolute inset-0 z-10"
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
-        >
-             {/* The Canvas container fills the flex area, but we limit the inner div to be square */}
-             <div className="absolute inset-0 flex items-center justify-center p-2">
-                 <div className="relative max-w-full max-h-full aspect-square w-auto h-auto shadow-2xl rounded-2xl border border-white/50 overflow-hidden bg-white/10 backdrop-blur-sm">
-                    <GameCanvas snake={snake} foods={foods} gridSize={GRID_SIZE} />
+        ></div>
+
+        {/* Camera Feed Background */}
+        {isCameraMode && (
+          <div className="absolute inset-0 z-0 overflow-hidden">
+             <video 
+                ref={(node) => {
+                    // We need to mirror the stream to this video element as well if we want to show it
+                    if (node && videoRef.current && videoRef.current.srcObject) {
+                        node.srcObject = videoRef.current.srcObject;
+                        node.play();
+                    }
+                }}
+                className="w-full h-full object-cover opacity-30 transform -scale-x-100" 
+                playsInline 
+                muted
+             />
+             {!isCameraReady && (
+                 <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+                    <span className="text-olive font-bold animate-pulse">Initializing Camera...</span>
                  </div>
+             )}
+             {/* Finger Indicator */}
+             {fingerPosition && (
+               <div 
+                 className="absolute w-6 h-6 border-4 border-olive rounded-full shadow-lg transform -translate-x-1/2 -translate-y-1/2 pointer-events-none transition-all duration-75"
+                 style={{ left: `${fingerPosition.x * 100}%`, top: `${fingerPosition.y * 100}%` }}
+               >
+                 <div className="w-full h-full bg-white/50 rounded-full animate-ping"></div>
+               </div>
+             )}
+          </div>
+        )}
+        
+        {/* Canvas Area - Maximized (Removed padding for desktop) */}
+        <div className="relative w-full h-full p-2 lg:p-1 flex items-center justify-center pointer-events-none z-10">
+             <div 
+                className="relative aspect-square shadow-2xl rounded-2xl border border-white/50 overflow-hidden bg-white/10 backdrop-blur-sm pointer-events-auto"
+                style={{ width: '10000px', height: '10000px', maxWidth: '100%', maxHeight: '100%' }}
+             >
+                <GameCanvas snake={snake} foods={foods} gridSize={GRID_SIZE} />
              </div>
-             
-             {/* Overlays */}
-             {(gameState === GameState.PAUSED || gameState === GameState.GAME_OVER) && (
-                <div className="absolute inset-0 bg-black/20 backdrop-blur-md flex items-center justify-center z-50">
-                  <div className="bg-white/80 backdrop-blur-xl p-6 rounded-2xl shadow-2xl text-center mx-6 max-w-sm border border-white">
-                    <h2 className="text-3xl font-serif font-bold mb-4 text-ink">
-                      {gameState === GameState.GAME_OVER ? 'Game Over' : 'Paused'}
-                    </h2>
-                    <div className="text-lg mb-6 text-ink/80">Score: <span className="font-bold text-ink">{score}</span></div>
-                    <div className="flex flex-col gap-3">
-                        {gameState === GameState.GAME_OVER ? (
-                        <button 
-                            onClick={() => setShowConfig(true)}
-                            className="bg-olive hover:bg-opacity-80 text-white px-8 py-3 rounded-full font-bold shadow-lg transition-transform active:scale-95"
-                        >
-                            Play Again
-                        </button>
-                        ) : (
-                        <button 
-                            onClick={pauseGame}
-                            className="bg-tan hover:bg-opacity-80 text-ink px-8 py-3 rounded-full font-bold shadow-lg transition-transform active:scale-95"
-                        >
-                            Resume
-                        </button>
-                        )}
-                    </div>
-                  </div>
+        </div>
+        
+        {/* Overlays */}
+        {(gameState === GameState.PAUSED || gameState === GameState.GAME_OVER) && (
+        <div className="absolute inset-0 bg-black/20 backdrop-blur-md flex items-center justify-center z-50 pointer-events-auto">
+            <div className="bg-white/80 backdrop-blur-xl p-6 rounded-2xl shadow-2xl text-center mx-6 max-w-sm border border-white">
+            <h2 className="text-3xl font-serif font-bold mb-4 text-ink">
+                {gameState === GameState.GAME_OVER ? 'Game Over' : 'Paused'}
+            </h2>
+            <div className="text-lg mb-6 text-ink/80">Score: <span className="font-bold text-ink">{score}</span></div>
+            <div className="flex flex-col gap-3">
+                {gameState === GameState.GAME_OVER ? (
+                <button 
+                    onClick={() => setShowConfig(true)}
+                    className="bg-olive hover:bg-opacity-80 text-white px-8 py-3 rounded-full font-bold shadow-lg transition-transform active:scale-95"
+                >
+                    Play Again
+                </button>
+                ) : (
+                <button 
+                    onClick={pauseGame}
+                    className="bg-tan hover:bg-opacity-80 text-ink px-8 py-3 rounded-full font-bold shadow-lg transition-transform active:scale-95"
+                >
+                    Resume
+                </button>
+                )}
+            </div>
+            </div>
+        </div>
+        )}
+      </div>
+
+      {/* --- CONTROL / INFO PANEL (Sidebar on Desktop, Bottom on Mobile) --- */}
+      <div className="
+        order-2 sm:order-2 
+        w-full sm:w-[280px] lg:w-[320px] 
+        bg-white/60 backdrop-blur-xl 
+        sm:border-l border-t sm:border-t-0 border-white/40 
+        z-40 shrink-0
+        flex flex-col
+        pb-safe sm:pb-0
+      ">
+        {/* DESKTOP HEADER (Hidden on Mobile) */}
+        <div className="hidden sm:flex flex-col p-6 pb-2 gap-4">
+            <div className="flex justify-between items-center">
+                <h1 className="text-2xl font-serif font-bold text-ink">Hungry Snake</h1>
+                <div className="flex gap-2">
+                    <button 
+                       onClick={() => setIsCameraMode(!isCameraMode)}
+                       title={isCameraMode ? "Disable Camera" : "Enable Finger Control"}
+                       className={`p-2 rounded-full transition-colors shadow-sm ${isCameraMode ? 'bg-olive text-white' : 'bg-white/40 hover:bg-white/60'}`}
+                    >
+                       📷
+                    </button>
+                    <button 
+                        onClick={() => setIsMuted(!isMuted)}
+                        className="p-2 bg-white/40 rounded-full hover:bg-white/60 transition-colors shadow-sm"
+                    >
+                        {isMuted ? '🔇' : '🔊'}
+                    </button>
                 </div>
-              )}
+            </div>
+            
+            <div className="bg-white/40 p-4 rounded-2xl border border-white/40 shadow-sm grid grid-cols-2 gap-4">
+                <div className="text-center">
+                    <span className="text-xs uppercase text-ink/60 font-bold block">Score</span>
+                    <span className="text-3xl font-bold text-ink">{score}</span>
+                </div>
+                <div className="text-center">
+                    <span className="text-xs uppercase text-ink/60 font-bold block">Time</span>
+                    <span className="text-3xl font-bold text-ink">{formatTime(timeLeft)}</span>
+                </div>
+            </div>
         </div>
 
-        {/* Bottom Panel: Two Columns */}
-        <div className="bg-white/60 backdrop-blur-xl border-t border-white/40 w-full z-40 pb-safe shrink-0">
-            <div className="max-w-[600px] mx-auto grid grid-cols-[1.2fr_1fr] gap-4 p-4 h-[160px]">
-                
-                {/* Left Column: Cue Word */}
-                <div className="bg-white/40 rounded-2xl border border-white/50 p-4 flex flex-col justify-center items-center text-center shadow-lg relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-full h-1 bg-olive/80"></div>
-                    {currentWord ? (
-                        <>
-                            <div className="text-xs font-bold text-ink/50 uppercase mb-1">Current Word</div>
-                            <div className="text-2xl md:text-3xl font-serif font-bold text-ink mb-1 break-words w-full leading-tight drop-shadow-sm">
-                                {currentWord.word}
-                            </div>
-                            <span className="inline-block px-2 py-0.5 bg-olive/20 text-olive text-xs font-bold rounded-md">
-                                {currentWord.pos}
-                            </span>
-                        </>
-                    ) : (
-                        <div className="text-tan animate-pulse font-serif italic">Get Ready...</div>
-                    )}
-                </div>
+        {/* SHARED CONTROLS AREA */}
+        <div className="
+            p-4 sm:p-6 sm:pt-4
+            grid grid-cols-[1.2fr_1fr] sm:flex sm:flex-col 
+            gap-4 
+            h-[160px] sm:h-auto sm:flex-1
+        ">
+            {/* Word Card */}
+            <div className="bg-white/40 rounded-2xl border border-white/50 p-4 flex flex-col justify-center items-center text-center shadow-lg relative overflow-hidden sm:grow sm:max-h-[250px] sm:min-h-[200px]">
+                <div className="absolute top-0 left-0 w-full h-1 bg-olive/80"></div>
+                {currentWord ? (
+                    <>
+                        <div className="text-xs font-bold text-ink/50 uppercase mb-1">Current Word</div>
+                        <div className="text-3xl lg:text-5xl font-serif font-bold text-ink mb-4 break-words w-full leading-tight drop-shadow-sm">
+                            {currentWord.word}
+                        </div>
+                        <span className="inline-block px-2 py-0.5 bg-olive/20 text-olive text-sm md:text-base font-bold rounded-md">
+                            {currentWord.pos}
+                        </span>
+                    </>
+                ) : (
+                    <div className="text-tan animate-pulse font-serif italic">Get Ready...</div>
+                )}
+            </div>
 
-                {/* Right Column: Direction Panel + Actions */}
-                <div className="flex flex-col gap-2">
-                    {/* D-Pad Area */}
-                    <div className="flex-1 bg-white/40 rounded-2xl border border-white/50 p-2 relative shadow-lg">
+            {/* Controls */}
+            <div className="flex flex-col gap-2 sm:gap-4 sm:shrink-0">
+                <div className="flex-1 bg-white/40 rounded-2xl border border-white/50 p-2 relative shadow-lg sm:h-48">
+                    {isCameraMode ? (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
+                            <span className="text-3xl mb-2">👆</span>
+                            <p className="text-xs font-bold text-ink/70">Finger Control Active</p>
+                            <p className="text-[10px] text-ink/50 mt-1">Move finger relative to screen center</p>
+                        </div>
+                    ) : (
                         <div className="absolute inset-0 flex flex-col items-center justify-center">
                             <button 
-                                className="w-10 h-7 bg-white/80 shadow-sm border border-white rounded-t-lg active:bg-olive active:text-white transition-colors mb-1 text-ink flex items-center justify-center text-xs"
+                                className="w-10 h-7 sm:w-14 sm:h-10 bg-white/80 shadow-sm border border-white rounded-t-lg active:bg-olive active:text-white transition-colors mb-1 text-ink flex items-center justify-center text-xs sm:text-sm"
                                 onClick={() => updateDirection({x:0, y:-1})}
                             >▲</button>
                             <div className="flex gap-2">
                                 <button 
-                                    className="w-10 h-7 bg-white/80 shadow-sm border border-white rounded-l-lg active:bg-olive active:text-white transition-colors text-ink flex items-center justify-center text-xs"
+                                    className="w-10 h-7 sm:w-14 sm:h-10 bg-white/80 shadow-sm border border-white rounded-l-lg active:bg-olive active:text-white transition-colors text-ink flex items-center justify-center text-xs sm:text-sm"
                                     onClick={() => updateDirection({x:-1, y:0})}
                                 >◀</button>
                                 <button 
-                                    className="w-10 h-7 bg-white/80 shadow-sm border border-white rounded-r-lg active:bg-olive active:text-white transition-colors text-ink flex items-center justify-center text-xs"
+                                    className="w-10 h-7 sm:w-14 sm:h-10 bg-white/80 shadow-sm border border-white rounded-r-lg active:bg-olive active:text-white transition-colors text-ink flex items-center justify-center text-xs sm:text-sm"
                                     onClick={() => updateDirection({x:1, y:0})}
                                 >▶</button>
                             </div>
                             <button 
-                                className="w-10 h-7 bg-white/80 shadow-sm border border-white rounded-b-lg active:bg-olive active:text-white transition-colors mt-1 text-ink flex items-center justify-center text-xs"
+                                className="w-10 h-7 sm:w-14 sm:h-10 bg-white/80 shadow-sm border border-white rounded-b-lg active:bg-olive active:text-white transition-colors mt-1 text-ink flex items-center justify-center text-xs sm:text-sm"
                                 onClick={() => updateDirection({x:0, y:1})}
                             >▼</button>
                         </div>
-                    </div>
-                    
-                    {/* Action Buttons */}
-                    <div className="flex gap-2">
-                        <button 
-                            onClick={pauseGame} 
-                            className="flex-1 bg-tan/30 hover:bg-tan/50 text-ink text-[10px] font-bold py-2 rounded-xl transition-colors uppercase tracking-wide border border-tan/20"
-                        >
-                            {gameState === GameState.PAUSED ? 'Resume' : 'Pause'}
-                        </button>
-                        <button 
-                            onClick={() => { setGameState(GameState.GAME_OVER); setShowConfig(true); }} 
-                            className="flex-1 bg-head/20 hover:bg-head/40 text-head-stroke text-[10px] font-bold py-2 rounded-xl transition-colors uppercase tracking-wide border border-head/20"
-                        >
-                            End
-                        </button>
-                    </div>
+                    )}
+                </div>
+                
+                <div className="flex gap-2">
+                    <button 
+                        onClick={pauseGame} 
+                        className="flex-1 bg-tan/30 hover:bg-tan/50 text-ink text-[10px] sm:text-sm font-bold py-2 sm:py-3 rounded-xl transition-colors uppercase tracking-wide border border-tan/20"
+                    >
+                        {gameState === GameState.PAUSED ? 'Resume' : 'Pause'}
+                    </button>
+                    <button 
+                        onClick={() => { setGameState(GameState.GAME_OVER); setShowConfig(true); }} 
+                        className="flex-1 bg-head/20 hover:bg-head/40 text-head-stroke text-[10px] sm:text-sm font-bold py-2 sm:py-3 rounded-xl transition-colors uppercase tracking-wide border border-head/20"
+                    >
+                        End
+                    </button>
                 </div>
             </div>
         </div>
@@ -343,10 +501,10 @@ function App() {
                                 <div className="bg-white/50 p-4 rounded-2xl border border-tan/30">
                                     <div className="text-xs font-bold text-olive uppercase mb-2 tracking-wider">iVocab Level</div>
                                     <div className="flex flex-wrap gap-2 mb-4">
-                                        {[1,2,3,4,5,6].map(l => (
+                                        {LEVELS.map(l => (
                                             <button 
                                                 key={l}
-                                                onClick={() => setSelectedLevel(l)}
+                                                onClick={() => handleLevelSelect(l)}
                                                 className={`w-10 h-10 rounded-full text-base font-bold shadow-sm transition-all ${selectedLevel === l ? 'bg-olive text-white scale-110' : 'bg-white text-olive hover:bg-olive/10'}`}
                                             >
                                                 {l}
@@ -356,15 +514,25 @@ function App() {
                                     
                                     <div className="text-xs font-bold text-olive uppercase mb-2 tracking-wider">Unit Range</div>
                                     <div className="grid grid-cols-5 gap-2">
-                                        {UNIT_RANGES.map((r, i) => (
-                                            <button 
-                                                key={i}
-                                                onClick={() => setSelectedRange(r)}
-                                                className={`text-[10px] py-1.5 px-1 rounded-lg border transition-all ${selectedRange === r ? 'bg-olive text-white border-olive font-bold' : 'bg-transparent border-olive/30 text-ink hover:bg-olive/5'}`}
-                                            >
-                                                {r[0]}-{r[1]}
-                                            </button>
-                                        ))}
+                                        {UNIT_RANGES.map((r, i) => {
+                                            const isDisabled = selectedLevel && CAP_LEVELS.includes(selectedLevel) && r[0] > 25;
+                                            return (
+                                                <button 
+                                                    key={i}
+                                                    onClick={() => setSelectedRange(r)}
+                                                    disabled={isDisabled}
+                                                    className={`text-[10px] py-1.5 px-1 rounded-lg border transition-all ${
+                                                        isDisabled 
+                                                            ? 'opacity-30 cursor-not-allowed border-transparent bg-gray-200 text-gray-400' 
+                                                            : selectedRange === r 
+                                                                ? 'bg-olive text-white border-olive font-bold' 
+                                                                : 'bg-transparent border-olive/30 text-ink hover:bg-olive/5'
+                                                    }`}
+                                                >
+                                                    {r[0]}-{r[1]}
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                     <button 
                                         onClick={handleLoadCSV}

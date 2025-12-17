@@ -50,10 +50,10 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ snake, foods, gridSize }) => {
 
       // --- CALCULATE SQUARE PLAY AREA ---
       // Determine the largest square that fits in the canvas
-      const size = Math.min(rect.width, rect.height);
-      const offsetX = (rect.width - size) / 2;
-      const offsetY = (rect.height - size) / 2;
-      const cellSize = size / gridSize;
+      const sizeRect = Math.min(rect.width, rect.height);
+      const offsetX = (rect.width - sizeRect) / 2;
+      const offsetY = (rect.height - sizeRect) / 2;
+      const cellSize = sizeRect / gridSize;
 
       // Translate context to center the grid
       ctx.translate(offsetX, offsetY);
@@ -61,14 +61,14 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ snake, foods, gridSize }) => {
       // --- GLASS BOARD BACKGROUND (Square Only) ---
       // Clip to the playable area to prevent "phantom space"
       ctx.beginPath();
-      ctx.rect(0, 0, size, size);
+      ctx.rect(0, 0, sizeRect, sizeRect);
       ctx.clip();
 
-      const bgGradient = ctx.createLinearGradient(0, 0, size, size);
+      const bgGradient = ctx.createLinearGradient(0, 0, sizeRect, sizeRect);
       bgGradient.addColorStop(0, 'rgba(255, 255, 255, 0.15)');
       bgGradient.addColorStop(1, 'rgba(255, 255, 255, 0.05)');
       ctx.fillStyle = bgGradient;
-      ctx.fillRect(0, 0, size, size);
+      ctx.fillRect(0, 0, sizeRect, sizeRect);
 
       // Glass Grid
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
@@ -77,14 +77,27 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ snake, foods, gridSize }) => {
         // Vertical
         ctx.beginPath();
         ctx.moveTo(i * cellSize, 0);
-        ctx.lineTo(i * cellSize, size);
+        ctx.lineTo(i * cellSize, sizeRect);
         ctx.stroke();
         // Horizontal
         ctx.beginPath();
         ctx.moveTo(0, i * cellSize);
-        ctx.lineTo(size, i * cellSize);
+        ctx.lineTo(sizeRect, i * cellSize);
         ctx.stroke();
       }
+
+      // --- WALL BORDER (VISIBLE) ---
+      ctx.save();
+      // Thick semi-transparent warning track (half clipped, so 10px visible)
+      ctx.lineWidth = 20; 
+      ctx.strokeStyle = 'rgba(160, 82, 45, 0.2)'; // Sienna with low opacity
+      ctx.strokeRect(0, 0, sizeRect, sizeRect);
+
+      // Distinct solid line at edge (half clipped, so 3px visible)
+      ctx.lineWidth = 6; 
+      ctx.strokeStyle = '#8D6E63'; // Brownish visible frame
+      ctx.strokeRect(0, 0, sizeRect, sizeRect);
+      ctx.restore();
 
       // --- UPDATE SNAKE INTERPOLATION ---
       if (visualSnakeRef.current.length !== snake.length) {
@@ -102,7 +115,8 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ snake, foods, gridSize }) => {
       foods.forEach(f => {
         const cx = (f.x + 0.5) * cellSize;
         const cy = (f.y + 0.5) * cellSize;
-        const size = cellSize * 1.1; 
+        // INCREASED SIZE from 1.1 to 1.4 for better visibility
+        const size = cellSize * 1.4; 
 
         ctx.save();
         
@@ -137,7 +151,8 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ snake, foods, gridSize }) => {
 
         // Text (No Truncation)
         ctx.fillStyle = '#3E2723'; 
-        const fontSize = Math.floor(cellSize * 0.35); 
+        // INCREASED FONT SIZE from 0.35 to 0.5
+        const fontSize = Math.floor(cellSize * 0.5); 
         ctx.font = `bold ${fontSize}px "Georgia", serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
