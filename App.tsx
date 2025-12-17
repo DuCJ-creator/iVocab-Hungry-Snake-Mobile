@@ -271,8 +271,9 @@ function App() {
 
       {/* --- MAIN GAME AREA --- */}
       <div className="flex-1 relative w-full h-full overflow-hidden bg-white/20 order-1 sm:order-1 flex flex-col justify-center">
+        {/* Touch Controls Layer - z-20 to be above the canvas (z-10) */}
         <div 
-          className="absolute inset-0 z-10"
+          className="absolute inset-0 z-20"
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
