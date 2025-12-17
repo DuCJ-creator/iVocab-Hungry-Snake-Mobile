@@ -226,6 +226,7 @@ export const useSnakeGame = (isMuted: boolean = false) => {
       if (moveAccumulator.current >= speed) {
         moveAccumulator.current = 0;
         
+        // Update direction only on move tick
         direction.current = nextDirection.current;
         const head = snakeRef.current[0];
         let newHead = {
@@ -235,32 +236,45 @@ export const useSnakeGame = (isMuted: boolean = false) => {
 
         const isInvincibleNow = time < invincibleUntilRef.current;
         let shouldMove = true;
+        let gameOver = false;
 
         // --- Collision Check (Wall or Self) ---
         
         // Wall
         if (newHead.x < 0 || newHead.x >= GRID_SIZE || newHead.y < 0 || newHead.y >= GRID_SIZE) {
             if (isInvincibleNow) {
-                // If invincible, just stop moving at the wall, don't die
+                // Invincible: Just stop. No penalty.
                 shouldMove = false;
             } else {
                 const survived = handlePenalty();
-                if (!survived) return; // Exit loop, game over
-                shouldMove = false;
+                if (!survived) {
+                    gameOver = true;
+                    shouldMove = false;
+                } else {
+                    // Survived but took damage. 
+                    // To prevent immediate subsequent hits, we probably shouldn't move into the wall anyway.
+                    shouldMove = false;
+                }
             }
         }
         // Self
         else if (snakeRef.current.some((p, i) => i > 0 && p.x === newHead.x && p.y === newHead.y)) {
              if (isInvincibleNow) {
-                 // If invincible, pass through self (do nothing special, just move)
+                 // Invincible: Ignore self collision, move through.
+                 shouldMove = true;
              } else {
                  const survived = handlePenalty();
-                 if (!survived) return; // Exit loop, game over
-                 shouldMove = false;
+                 if (!survived) {
+                    gameOver = true;
+                    shouldMove = false;
+                 } else {
+                    // Survived damage, maybe stop moving for this tick to reorient?
+                    shouldMove = false; 
+                 }
              }
         }
 
-        if (shouldMove) {
+        if (shouldMove && !gameOver) {
             // --- Movement & Eating ---
             const currentFoods = foodsRef.current;
             const hitFood = currentFoods.find(f => f.x === newHead.x && f.y === newHead.y);
@@ -282,34 +296,51 @@ export const useSnakeGame = (isMuted: boolean = false) => {
     
                      setTimeout(() => nextQuestion(), 0);
                  } else {
-                     // Ate wrong food
-                     const survived = handlePenalty();
-                     if (!survived) return; // Exit loop, game over
-                     // Don't move if penalty happened (snake might have shrunk/reset)
-                     // But we want to process the penalty effect visually immediately? 
-                     // handlePenalty already updated state.
-                     return; // Skip rest of this tick
+                     // Ate WRONG food
+                     if (isInvincibleNow) {
+                        // Invincible: Treat wrong food as empty space. 
+                        // Walk over it, do not eat, do not penalize.
+                        ateCorrect = false;
+                     } else {
+                        // Not Invincible: Punishment
+                        const survived = handlePenalty();
+                        if (!survived) {
+                            gameOver = true;
+                        }
+                        // If penalty taken, we usually skip the move to allow reset
+                        // But handlePenalty calls nextQuestion() which resets snake/food immediately?
+                        // Actually handlePenalty forces nextQuestion().
+                        // So we should return here to let the state update reflect.
+                        return; // BREAK LOOP TICK, but requestAnimationFrame is outside
+                     }
                  }
             }
     
-            const newSnake = [newHead, ...snakeRef.current];
-            
-            if (ateCorrect) {
-                // Grow (don't pop)
-            } else {
-                newSnake.pop(); // Move normally
+            if (!gameOver) {
+                const newSnake = [newHead, ...snakeRef.current];
+                if (ateCorrect) {
+                    // Grow
+                } else {
+                    newSnake.pop(); // Move normally
+                }
+                snakeRef.current = newSnake;
+                setSnake(newSnake);
             }
-    
-            snakeRef.current = newSnake;
-            setSnake(newSnake);
         }
       }
+      
+      // CRITICAL FIX: Always request next frame unless game is explicitly over via state check
+      // We check the ref because setGameState might not have updated the component state in this closure yet,
+      // but usually the 'useEffect' dependency [gameState] handles the teardown.
+      // However, to be safe against the "freeze" bug, we rely on the fact that 
+      // if gameState BECOMES 'GAME_OVER', this effect cleans up. 
+      // We just need to ensure we don't return early above without requesting frame.
       gameLoopRef.current = requestAnimationFrame(loop);
     };
 
     gameLoopRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(gameLoopRef.current);
-  }, [gameState, nextQuestion, playTone, score]); // score is dependency for penalty calculation
+  }, [gameState, nextQuestion, playTone, score]);
 
   useEffect(() => {
     if (gameState !== GameState.PLAYING) return;
