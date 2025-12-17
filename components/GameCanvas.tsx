@@ -5,6 +5,7 @@ interface GameCanvasProps {
   snake: Point[];
   foods: Food[];
   gridSize: number;
+  isInvincible?: boolean;
 }
 
 // Linear Interpolation Helper
@@ -12,7 +13,7 @@ const lerp = (start: number, end: number, t: number) => {
   return start * (1 - t) + end * t;
 };
 
-const GameCanvas: React.FC<GameCanvasProps> = ({ snake, foods, gridSize }) => {
+const GameCanvas: React.FC<GameCanvasProps> = ({ snake, foods, gridSize, isInvincible = false }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
   // Store the *visual* positions of the snake segments to animate them
@@ -162,6 +163,12 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ snake, foods, gridSize }) => {
       });
 
       // --- SNAKE (GLASS STYLE) ---
+      // Apply invincibility effect (flash)
+      if (isInvincible) {
+          const flash = Math.abs(Math.sin(Date.now() / 100)); // Fast pulse
+          ctx.globalAlpha = 0.4 + flash * 0.4;
+      }
+
       for (let i = visualSnakeRef.current.length - 1; i >= 0; i--) {
           const segment = visualSnakeRef.current[i];
           const cx = (segment.x + 0.5) * cellSize;
@@ -222,13 +229,16 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ snake, foods, gridSize }) => {
           
           ctx.restore();
       }
+      
+      // Reset alpha
+      ctx.globalAlpha = 1;
 
       reqIdRef.current = requestAnimationFrame(render);
     };
 
     reqIdRef.current = requestAnimationFrame(render);
     return () => cancelAnimationFrame(reqIdRef.current);
-  }, [snake, foods, gridSize]);
+  }, [snake, foods, gridSize, isInvincible]);
 
   return (
     <canvas 

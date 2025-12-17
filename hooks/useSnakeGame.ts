@@ -16,6 +16,7 @@ export const useSnakeGame = (isMuted: boolean = false) => {
   
   const [currentRound, setCurrentRound] = useState<RoundData>({ word: null, foods: [] });
   const [snake, setSnake] = useState<Point[]>([{ x: 5, y: 5 }]);
+  const [isInvincible, setIsInvincible] = useState(false);
   
   const foodsRef = useRef<Food[]>([]); 
   const direction = useRef<Point>({ x: 1, y: 0 }); 
@@ -26,6 +27,8 @@ export const useSnakeGame = (isMuted: boolean = false) => {
   const gameLoopRef = useRef<number>(0);
   const usedWordsRef = useRef<Set<string>>(new Set());
   const penaltyRef = useRef<number>(0);
+  const invincibleUntilRef = useRef<number>(0);
+  const invincibleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   const isMutedRef = useRef(isMuted);
   useEffect(() => {
@@ -153,6 +156,11 @@ export const useSnakeGame = (isMuted: boolean = false) => {
     usedWordsRef.current.clear();
     penaltyRef.current = 0; // Reset penalty
     
+    // Reset Invincibility
+    setIsInvincible(false);
+    invincibleUntilRef.current = 0;
+    if (invincibleTimerRef.current) clearTimeout(invincibleTimerRef.current);
+
     setGameState(GameState.PLAYING);
     nextQuestion(activeWords);
     lastTimeRef.current = performance.now();
@@ -225,16 +233,26 @@ export const useSnakeGame = (isMuted: boolean = false) => {
           y: head.y + direction.current.y
         };
 
+        const isInvincibleNow = time < invincibleUntilRef.current;
+
         // --- Collision Check (Wall or Self) ---
         let collision = false;
         
         // Wall
         if (newHead.x < 0 || newHead.x >= GRID_SIZE || newHead.y < 0 || newHead.y >= GRID_SIZE) {
+            if (isInvincibleNow) {
+                // If invincible, just stop moving at the wall, don't die
+                return; 
+            }
             collision = true;
         }
         // Self
         else if (snakeRef.current.some((p, i) => i > 0 && p.x === newHead.x && p.y === newHead.y)) {
-             collision = true;
+             if (isInvincibleNow) {
+                 // If invincible, pass through self (do nothing)
+             } else {
+                 collision = true;
+             }
         }
 
         if (collision) {
@@ -254,6 +272,13 @@ export const useSnakeGame = (isMuted: boolean = false) => {
                  playTone('correct');
                  setScore(s => s + 10 + (penaltyRef.current > 0 ? 0 : 5)); // Bonus if no penalty
                  penaltyRef.current = 0; // Reset penalty streak on correct eat
+                 
+                 // Trigger Invincibility for 1 second
+                 invincibleUntilRef.current = time + 1000;
+                 setIsInvincible(true);
+                 if (invincibleTimerRef.current) clearTimeout(invincibleTimerRef.current);
+                 invincibleTimerRef.current = setTimeout(() => setIsInvincible(false), 1000);
+
                  setTimeout(() => nextQuestion(), 0);
              } else {
                  // Ate wrong food
@@ -301,6 +326,6 @@ export const useSnakeGame = (isMuted: boolean = false) => {
     gameState, score, timeLeft, snake, currentRound, 
     foods: currentRound.foods, currentWord: currentRound.word, 
     words, setWords, startGame, pauseGame, updateDirection, setGameState,
-    snakeDirection: direction.current
+    snakeDirection: direction.current, isInvincible
   };
 };

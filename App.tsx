@@ -29,7 +29,7 @@ function App() {
 
   const { 
     gameState, score, timeLeft, snake, currentRound, words, setWords, 
-    startGame, pauseGame, updateDirection, setGameState 
+    startGame, pauseGame, updateDirection, setGameState, isInvincible 
   } = useSnakeGame(isMuted);
   
   const { word: currentWord, foods } = currentRound;
@@ -258,7 +258,7 @@ function App() {
                 className="relative aspect-square shadow-2xl rounded-2xl border border-white/50 overflow-hidden bg-white/10 backdrop-blur-sm pointer-events-auto"
                 style={{ width: '10000px', height: '10000px', maxWidth: '100%', maxHeight: '100%' }}
              >
-                <GameCanvas snake={snake} foods={foods} gridSize={GRID_SIZE} />
+                <GameCanvas snake={snake} foods={foods} gridSize={GRID_SIZE} isInvincible={isInvincible} />
              </div>
         </div>
         
