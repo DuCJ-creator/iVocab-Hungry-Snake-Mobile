@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSnakeGame } from './hooks/useSnakeGame';
-import { useHandTracking } from './hooks/useHandTracking';
 import GameCanvas from './components/GameCanvas';
 import ParticleBackground from './components/ParticleBackground';
 import { GameState, WordItem } from './types';
@@ -42,32 +41,6 @@ function App() {
   const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
   const [selectedRange, setSelectedRange] = useState<number[] | null>(null);
   const [gameDuration, setGameDuration] = useState(10); 
-
-  // --- CAMERA / HAND TRACKING ---
-  const [isCameraMode, setIsCameraMode] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const { fingerPosition, isCameraReady } = useHandTracking(videoRef.current, isCameraMode);
-
-  // Control Snake with Finger
-  useEffect(() => {
-    if (!isCameraMode || !fingerPosition || gameState !== GameState.PLAYING) return;
-
-    // Center is (0.5, 0.5)
-    // We determine direction based on deviation from center
-    const dx = fingerPosition.x - 0.5;
-    const dy = fingerPosition.y - 0.5;
-    const deadZone = 0.1; // 10% movement required to trigger turn
-
-    if (Math.abs(dx) < deadZone && Math.abs(dy) < deadZone) return;
-
-    // Move in the dominant axis
-    if (Math.abs(dx) > Math.abs(dy)) {
-        updateDirection({ x: dx > 0 ? 1 : -1, y: 0 });
-    } else {
-        updateDirection({ x: 0, y: dy > 0 ? 1 : -1 });
-    }
-  }, [fingerPosition, isCameraMode, gameState, updateDirection]);
-
 
   // --- JOYSTICK TOUCH CONTROLS ---
   const joystickStart = useRef<{x: number, y: number} | null>(null);
@@ -247,9 +220,6 @@ function App() {
   return (
     <div className="flex flex-col sm:flex-row h-[100dvh] w-full mx-auto font-sans touch-none select-none overflow-hidden overscroll-none relative bg-[#E0DDD5]">
       
-      {/* Hidden Video Element for MediaPipe */}
-      <video ref={videoRef} className="hidden" playsInline muted></video>
-
       {/* --- MOBILE HEADER (Hidden on Desktop) --- */}
       <div className="sm:hidden w-full px-3 py-2 flex justify-between items-center z-30 shrink-0 bg-[#E0DDD5]/50 backdrop-blur-sm">
           <div className="bg-white/40 backdrop-blur-md px-4 py-2 rounded-full shadow-sm border border-white/40 flex gap-4">
@@ -281,38 +251,6 @@ function App() {
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         ></div>
-
-        {/* Camera Feed Background */}
-        {isCameraMode && (
-          <div className="absolute inset-0 z-0 overflow-hidden">
-             <video 
-                ref={(node) => {
-                    // We need to mirror the stream to this video element as well if we want to show it
-                    if (node && videoRef.current && videoRef.current.srcObject) {
-                        node.srcObject = videoRef.current.srcObject;
-                        node.play();
-                    }
-                }}
-                className="w-full h-full object-cover opacity-30 transform -scale-x-100" 
-                playsInline 
-                muted
-             />
-             {!isCameraReady && (
-                 <div className="absolute inset-0 flex items-center justify-center bg-black/10">
-                    <span className="text-olive font-bold animate-pulse">Initializing Camera...</span>
-                 </div>
-             )}
-             {/* Finger Indicator */}
-             {fingerPosition && (
-               <div 
-                 className="absolute w-6 h-6 border-4 border-olive rounded-full shadow-lg transform -translate-x-1/2 -translate-y-1/2 pointer-events-none transition-all duration-75"
-                 style={{ left: `${fingerPosition.x * 100}%`, top: `${fingerPosition.y * 100}%` }}
-               >
-                 <div className="w-full h-full bg-white/50 rounded-full animate-ping"></div>
-               </div>
-             )}
-          </div>
-        )}
         
         {/* Canvas Area - Maximized (Removed padding for desktop) */}
         <div className="relative w-full h-full p-2 lg:p-1 flex items-center justify-center pointer-events-none z-10">
@@ -370,13 +308,6 @@ function App() {
                 <h1 className="text-2xl font-serif font-bold text-ink">Hungry Snake</h1>
                 <div className="flex gap-2">
                     <button 
-                       onClick={() => setIsCameraMode(!isCameraMode)}
-                       title={isCameraMode ? "Disable Camera" : "Enable Finger Control"}
-                       className={`p-2 rounded-full transition-colors shadow-sm ${isCameraMode ? 'bg-olive text-white' : 'bg-white/40 hover:bg-white/60'}`}
-                    >
-                       📷
-                    </button>
-                    <button 
                         onClick={() => setIsMuted(!isMuted)}
                         className="p-2 bg-white/40 rounded-full hover:bg-white/60 transition-colors shadow-sm"
                     >
@@ -425,34 +356,26 @@ function App() {
             {/* Controls */}
             <div className="flex flex-col gap-2 sm:gap-4 sm:shrink-0">
                 <div className="flex-1 bg-white/40 rounded-2xl border border-white/50 p-2 relative shadow-lg sm:h-48">
-                    {isCameraMode ? (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
-                            <span className="text-3xl mb-2">👆</span>
-                            <p className="text-xs font-bold text-ink/70">Finger Control Active</p>
-                            <p className="text-[10px] text-ink/50 mt-1">Move finger relative to screen center</p>
-                        </div>
-                    ) : (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <button 
+                            className="w-10 h-7 sm:w-14 sm:h-10 bg-white/80 shadow-sm border border-white rounded-t-lg active:bg-olive active:text-white transition-colors mb-1 text-ink flex items-center justify-center text-xs sm:text-sm"
+                            onClick={() => updateDirection({x:0, y:-1})}
+                        >▲</button>
+                        <div className="flex gap-2">
                             <button 
-                                className="w-10 h-7 sm:w-14 sm:h-10 bg-white/80 shadow-sm border border-white rounded-t-lg active:bg-olive active:text-white transition-colors mb-1 text-ink flex items-center justify-center text-xs sm:text-sm"
-                                onClick={() => updateDirection({x:0, y:-1})}
-                            >▲</button>
-                            <div className="flex gap-2">
-                                <button 
-                                    className="w-10 h-7 sm:w-14 sm:h-10 bg-white/80 shadow-sm border border-white rounded-l-lg active:bg-olive active:text-white transition-colors text-ink flex items-center justify-center text-xs sm:text-sm"
-                                    onClick={() => updateDirection({x:-1, y:0})}
-                                >◀</button>
-                                <button 
-                                    className="w-10 h-7 sm:w-14 sm:h-10 bg-white/80 shadow-sm border border-white rounded-r-lg active:bg-olive active:text-white transition-colors text-ink flex items-center justify-center text-xs sm:text-sm"
-                                    onClick={() => updateDirection({x:1, y:0})}
-                                >▶</button>
-                            </div>
+                                className="w-10 h-7 sm:w-14 sm:h-10 bg-white/80 shadow-sm border border-white rounded-l-lg active:bg-olive active:text-white transition-colors text-ink flex items-center justify-center text-xs sm:text-sm"
+                                onClick={() => updateDirection({x:-1, y:0})}
+                            >◀</button>
                             <button 
-                                className="w-10 h-7 sm:w-14 sm:h-10 bg-white/80 shadow-sm border border-white rounded-b-lg active:bg-olive active:text-white transition-colors mt-1 text-ink flex items-center justify-center text-xs sm:text-sm"
-                                onClick={() => updateDirection({x:0, y:1})}
-                            >▼</button>
+                                className="w-10 h-7 sm:w-14 sm:h-10 bg-white/80 shadow-sm border border-white rounded-r-lg active:bg-olive active:text-white transition-colors text-ink flex items-center justify-center text-xs sm:text-sm"
+                                onClick={() => updateDirection({x:1, y:0})}
+                            >▶</button>
                         </div>
-                    )}
+                        <button 
+                            className="w-10 h-7 sm:w-14 sm:h-10 bg-white/80 shadow-sm border border-white rounded-b-lg active:bg-olive active:text-white transition-colors mt-1 text-ink flex items-center justify-center text-xs sm:text-sm"
+                            onClick={() => updateDirection({x:0, y:1})}
+                        >▼</button>
+                    </div>
                 </div>
                 
                 <div className="flex gap-2">

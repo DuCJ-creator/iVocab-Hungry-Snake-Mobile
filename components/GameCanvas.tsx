@@ -29,7 +29,8 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ snake, foods, gridSize }) => {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d', { alpha: false }); // Optimize for no transparency on canvas itself if possible, though we need transparency for layers
+    // CRITICAL: alpha: true ensures the canvas is transparent, not black.
+    const ctx = canvas.getContext('2d', { alpha: true }); 
     if (!ctx) return;
 
     const render = () => {
