@@ -1,3 +1,4 @@
+
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { GameState, Point, Food, WordItem } from '../types';
 
@@ -39,7 +40,6 @@ export const useSnakeGame = (isMuted: boolean = false) => {
     isMutedRef.current = isMuted;
   }, [isMuted]);
 
-  // --- Sound Synthesizer ---
   const playTone = useCallback((type: 'correct' | 'wrong' | 'gameover') => {
     if (isMutedRef.current) return;
     try {
@@ -141,13 +141,42 @@ export const useSnakeGame = (isMuted: boolean = false) => {
     foodsRef.current = foods;
   }, [words]);
 
+  const handlePenalty = (currentScore: number) => {
+    correctStreakRef.current = 0;
+    mistakeStreakRef.current += 1;
+    
+    const cost = mistakeStreakRef.current * 10;
+    const newScore = currentScore - cost;
+    
+    if (newScore <= 0) {
+        setScore(0);
+        setGameState(GameState.GAME_OVER);
+        playTone('gameover');
+        return true;
+    }
+    
+    playTone('wrong');
+    setScore(newScore);
+    
+    // Shrink snake
+    const currentSnake = [...snakeRef.current];
+    for(let i = 0; i < mistakeStreakRef.current && currentSnake.length > 1; i++){
+        currentSnake.pop();
+    }
+    snakeRef.current = currentSnake;
+    setSnake(currentSnake);
+
+    setTimeout(() => nextQuestion(), 0);
+    return false;
+  };
+
   const startGame = useCallback((duration: number, initialWords?: WordItem[]) => {
     const activeWords = initialWords || words;
     if (activeWords.length === 0) return;
     
     if (initialWords) setWords(initialWords);
 
-    setScore(0);
+    setScore(100); // Start with some base score to allow for mistakes
     setTimeLeft(duration * 60);
     const startX = Math.floor(GRID_SIZE / 2);
     const startY = Math.floor(GRID_SIZE / 2);
@@ -157,15 +186,11 @@ export const useSnakeGame = (isMuted: boolean = false) => {
     direction.current = { x: 1, y: 0 };
     nextDirection.current = { x: 1, y: 0 };
     usedWordsRef.current.clear();
-    
-    // Reset Streaks
     correctStreakRef.current = 0;
     mistakeStreakRef.current = 0;
     
-    // Reset Invincibility
     setIsInvincible(false);
     invincibleUntilRef.current = 0;
-    if (invincibleTimerRef.current) clearTimeout(invincibleTimerRef.current);
 
     setGameState(GameState.PLAYING);
     nextQuestion(activeWords);
@@ -186,37 +211,6 @@ export const useSnakeGame = (isMuted: boolean = false) => {
     nextDirection.current = newDir;
   };
 
-  // Helper to handle penalties (wall hit or wrong food)
-  const handlePenalty = (currentScore: number) => {
-      // 1. Reset correct streak
-      correctStreakRef.current = 0;
-      // 2. Increment mistake streak
-      mistakeStreakRef.current += 1;
-      
-      const cost = mistakeStreakRef.current * 10;
-      const newScore = Math.max(0, currentScore - cost);
-      
-      // Check if player can afford the penalty
-      // In streak mode, we usually allow score to go to 0, but if it's already 0 we might game over?
-      // User says "until a wrong word... deduct with 10, 20...". 
-      // If score reaches 0, we'll keep it at 0 but let game continue until time or explicit exit.
-      
-      playTone('wrong');
-      setScore(newScore);
-      
-      // Shrink snake by 'mistake streak' amount, but keep at least length 1
-      const currentSnake = [...snakeRef.current];
-      for(let i = 0; i < mistakeStreakRef.current && currentSnake.length > 1; i++){
-          currentSnake.pop();
-      }
-      snakeRef.current = currentSnake;
-      setSnake(currentSnake);
-
-      // Force new round
-      setTimeout(() => nextQuestion(), 0);
-      return true; // Game continues
-  };
-
   useEffect(() => {
     if (gameState !== GameState.PLAYING) {
       cancelAnimationFrame(gameLoopRef.current);
@@ -227,14 +221,11 @@ export const useSnakeGame = (isMuted: boolean = false) => {
       const dt = time - lastTimeRef.current;
       lastTimeRef.current = time;
       
-      // Speed logic
       const speed = Math.max(100, 300 - Math.floor(score / 500) * 10);
-      
       moveAccumulator.current += dt;
 
       if (moveAccumulator.current >= speed) {
         moveAccumulator.current = 0;
-        
         direction.current = nextDirection.current;
         const head = snakeRef.current[0];
         let newHead = {
@@ -244,80 +235,57 @@ export const useSnakeGame = (isMuted: boolean = false) => {
 
         const isInvincibleNow = time < invincibleUntilRef.current;
         let shouldMove = true;
-        let gameOver = false;
 
-        // --- Collision Check ---
-        
-        // Wall
+        // Collision: Wall
         if (newHead.x < 0 || newHead.x >= GRID_SIZE || newHead.y < 0 || newHead.y >= GRID_SIZE) {
-            if (isInvincibleNow) {
-                // Invincible: Just stop at the edge. No streak reset, no deduction.
+            if (!isInvincibleNow) {
+                if (handlePenalty(score)) return;
                 shouldMove = false;
             } else {
-                handlePenalty(score);
-                shouldMove = false;
+                shouldMove = false; // Just stop at wall if invincible
             }
         }
-        // Self
+        // Collision: Self
         else if (snakeRef.current.some((p, i) => i > 0 && p.x === newHead.x && p.y === newHead.y)) {
-             if (isInvincibleNow) {
-                 // Invincible: Walk through self.
-                 shouldMove = true;
-             } else {
-                 handlePenalty(score);
+             if (!isInvincibleNow) {
+                 if (handlePenalty(score)) return;
                  shouldMove = false;
              }
         }
 
-        if (shouldMove && !gameOver) {
+        if (shouldMove) {
             const currentFoods = foodsRef.current;
             const hitFood = currentFoods.find(f => f.x === newHead.x && f.y === newHead.y);
-    
             let ateCorrect = false;
-    
+
             if (hitFood) {
                  if (hitFood.correct) {
                      ateCorrect = true;
                      playTone('correct');
-                     
-                     // Scoring Logic: 10, 20, 30...
                      correctStreakRef.current += 1;
-                     mistakeStreakRef.current = 0; // Reset penalty streak
-                     const pointsToAdd = correctStreakRef.current * 10;
-                     setScore(s => s + pointsToAdd);
+                     mistakeStreakRef.current = 0;
+                     setScore(s => s + correctStreakRef.current * 10);
                      
-                     // Trigger Invincibility for 1 second
+                     // 1s Invincibility
                      invincibleUntilRef.current = time + 1000;
                      setIsInvincible(true);
                      if (invincibleTimerRef.current) clearTimeout(invincibleTimerRef.current);
                      invincibleTimerRef.current = setTimeout(() => setIsInvincible(false), 1000);
-    
                      setTimeout(() => nextQuestion(), 0);
                  } else {
-                     // Ate WRONG food
-                     if (isInvincibleNow) {
-                        // Invincible: Walk over it. No streak disturbance.
-                        ateCorrect = false;
-                     } else {
-                        handlePenalty(score);
-                        return; // Stop processing this move tick
+                     if (!isInvincibleNow) {
+                        if (handlePenalty(score)) return;
+                        return;
                      }
                  }
             }
-    
-            if (!gameOver) {
-                const newSnake = [newHead, ...snakeRef.current];
-                if (ateCorrect) {
-                    // Grow
-                } else {
-                    newSnake.pop(); // Move normally
-                }
-                snakeRef.current = newSnake;
-                setSnake(newSnake);
-            }
+
+            const newSnake = [newHead, ...snakeRef.current];
+            if (!ateCorrect) newSnake.pop();
+            snakeRef.current = newSnake;
+            setSnake(newSnake);
         }
       }
-      
       gameLoopRef.current = requestAnimationFrame(loop);
     };
 

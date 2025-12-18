@@ -1,5 +1,5 @@
 {
   "name": "Hungry Snake",
-  "description": "A premium vocabulary snake game.",
+  "description": "A premium vocabulary snake game with streak-based scoring.",
   "requestFramePermissions": []
 }
