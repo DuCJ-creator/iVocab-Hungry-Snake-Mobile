@@ -24,29 +24,47 @@ const UNIT_RANGES = [[1,5],[6,10],[11,15],[16,20],[21,25],[26,30],[31,35],[36,40
 
 const CN_INSTRUCTION_SVG = `data:image/svg+xml;utf8,${encodeURIComponent(`
 <svg width="600" height="800" viewBox="0 0 600 800" xmlns="http://www.w3.org/2000/svg">
-  <rect width="100%" height="100%" fill="#F0EDE5"/>
-  <text x="40" y="80" font-family="Georgia, serif" font-size="50" font-weight="bold" fill="#7D8D70">遊戲說明</text>
-  <line x1="40" y1="105" x2="560" y2="105" stroke="#A8B7A5" stroke-width="2" />
-  <g transform="translate(40, 160)">
-    <text font-family="system-ui, sans-serif" font-size="20" font-weight="bold" fill="#5A4A42">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#F0EDE5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E8E5DA;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#bg)"/>
+  <circle cx="500" cy="100" r="80" fill="#FFFFFF" fill-opacity="0.4" />
+  <circle cx="550" cy="150" r="60" fill="#FFFFFF" fill-opacity="0.4" />
+  <circle cx="50" cy="700" r="100" fill="#FFFFFF" fill-opacity="0.4" />
+  <text x="40" y="100" font-family="Georgia, serif" font-size="56" font-weight="bold" fill="#7D8D70">遊戲說明</text>
+  <line x1="40" y1="125" x2="560" y2="125" stroke="#A8B7A5" stroke-width="1" />
+  <g transform="translate(40, 180)">
+    <text font-family="system-ui, sans-serif" font-size="22" font-weight="bold" fill="#5A4A42">
       <tspan x="0" y="0" text-decoration="underline" fill="#B7AFA1">遊戲目標：</tspan>
-      <tspan x="110" y="0">吃掉對應英文單字的中釋義。</tspan>
-      
-      <tspan x="0" y="70" text-decoration="underline" fill="#B7AFA1">操作方式：</tspan>
-      <tspan x="110" y="70">電腦：方向鍵移動，空白鍵暫停。</tspan>
-      <tspan x="110" y="100">手機：滑動螢幕控制方向。</tspan>
-      
-      <tspan x="0" y="170" text-decoration="underline" fill="#B7AFA1">連勝獎勵：</tspan>
-      <tspan x="110" y="170">連續答對獲得遞增分數並增長蛇身。</tspan>
-      
-      <tspan x="0" y="240" text-decoration="underline" fill="#B7AFA1">失誤懲罰：</tspan>
-      <tspan x="110" y="240">撞牆、撞身或吃錯字扣分並縮短蛇身。</tspan>
-      
-      <tspan x="0" y="310" text-decoration="underline" fill="#B7AFA1">無敵護盾：</tspan>
-      <tspan x="110" y="310">答對後獲得 1 秒無敵，可穿牆穿身。</tspan>
-      
-      <tspan x="0" y="380" text-decoration="underline" fill="#B7AFA1">遊戲結束：</tspan>
-      <tspan x="110" y="380">時間耗盡或分數歸零。</tspan>
+      <tspan x="115" y="0">控制貪吃蛇吃到與英文單字對應的中</tspan>
+      <tspan x="0" y="35">文釋義。</tspan>
+    </text>
+    <text font-family="system-ui, sans-serif" font-size="22" font-weight="bold" fill="#5A4A42" y="90">
+      <tspan x="0" y="0" text-decoration="underline" fill="#B7AFA1">操作方式：</tspan>
+      <tspan x="115" y="0">電腦： 使用方向鍵移動，空白鍵暫停。</tspan>
+      <tspan x="115" y="35">手機： 滑動螢幕控制方向。</tspan>
+    </text>
+    <text font-family="system-ui, sans-serif" font-size="22" font-weight="bold" fill="#5A4A42" y="180">
+      <tspan x="0" y="0" text-decoration="underline" fill="#B7AFA1">連勝獎勵：</tspan>
+      <tspan x="115" y="0">連續答對可獲得遞增分數 (+10, +20...) </tspan>
+      <tspan x="0" y="35">並增長蛇身。</tspan>
+    </text>
+    <text font-family="system-ui, sans-serif" font-size="22" font-weight="bold" fill="#5A4A42" y="270">
+      <tspan x="0" y="0" text-decoration="underline" fill="#B7AFA1">失誤懲罰：</tspan>
+      <tspan x="115" y="0">撞牆、撞身或吃錯字將扣分 (-10, -20...) </tspan>
+      <tspan x="0" y="35">並縮短蛇身。</tspan>
+    </text>
+    <text font-family="system-ui, sans-serif" font-size="22" font-weight="bold" fill="#5A4A42" y="360">
+      <tspan x="0" y="0" text-decoration="underline" fill="#B7AFA1">無敵護盾：</tspan>
+      <tspan x="115" y="0">答對後獲得 1 秒無敵，期間可安全穿越</tspan>
+      <tspan x="0" y="35">牆壁與障礙。</tspan>
+    </text>
+    <text font-family="system-ui, sans-serif" font-size="22" font-weight="bold" fill="#5A4A42" y="450">
+      <tspan x="0" y="0" text-decoration="underline" fill="#B7AFA1">遊戲結束：</tspan>
+      <tspan x="115" y="0">時間耗盡或分數歸零時遊戲結束。</tspan>
     </text>
   </g>
 </svg>
@@ -54,29 +72,51 @@ const CN_INSTRUCTION_SVG = `data:image/svg+xml;utf8,${encodeURIComponent(`
 
 const EN_INSTRUCTION_SVG = `data:image/svg+xml;utf8,${encodeURIComponent(`
 <svg width="600" height="800" viewBox="0 0 600 800" xmlns="http://www.w3.org/2000/svg">
-  <rect width="100%" height="100%" fill="#F0EDE5"/>
-  <text x="40" y="80" font-family="Georgia, serif" font-size="50" font-weight="bold" fill="#7D8D70">How to Play</text>
-  <line x1="40" y1="105" x2="560" y2="105" stroke="#A8B7A5" stroke-width="2" />
-  <g transform="translate(40, 160)">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#F0EDE5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E8E5DA;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#bg)"/>
+  <circle cx="500" cy="100" r="80" fill="#FFFFFF" fill-opacity="0.4" />
+  <circle cx="50" cy="700" r="100" fill="#FFFFFF" fill-opacity="0.4" />
+  <text x="40" y="100" font-family="Georgia, serif" font-size="56" font-weight="bold" fill="#7D8D70">How to Play</text>
+  <line x1="40" y1="125" x2="560" y2="125" stroke="#A8B7A5" stroke-width="1" />
+  <g transform="translate(40, 180)">
     <text font-family="system-ui, sans-serif" font-size="20" font-weight="bold" fill="#5A4A42">
       <tspan x="0" y="0" text-decoration="underline" fill="#B7AFA1">Objective:</tspan>
-      <tspan x="110" y="0">Eat the correct Chinese meaning.</tspan>
-      
-      <tspan x="0" y="70" text-decoration="underline" fill="#B7AFA1">Controls:</tspan>
-      <tspan x="110" y="70">PC: Arrow keys. Space to Pause.</tspan>
-      <tspan x="110" y="100">Mobile: Swipe screen to steer.</tspan>
-      
-      <tspan x="0" y="170" text-decoration="underline" fill="#B7AFA1">Streaks:</tspan>
-      <tspan x="110" y="170">Correct hits grow snake and score.</tspan>
-      
-      <tspan x="0" y="240" text-decoration="underline" fill="#B7AFA1">Penalties:</tspan>
-      <tspan x="110" y="240">Wrong hits or walls shrink snake.</tspan>
-      
-      <tspan x="0" y="310" text-decoration="underline" fill="#B7AFA1">Shield:</tspan>
-      <tspan x="110" y="310">1s invincibility after correct hit.</tspan>
-      
-      <tspan x="0" y="380" text-decoration="underline" fill="#B7AFA1">Game Over:</tspan>
-      <tspan x="110" y="380">Time out or zero score.</tspan>
+      <tspan x="110" y="0">Control the snake to eat the Chinese</tspan>
+      <tspan x="0" y="30">meaning that matches the English word.</tspan>
+    </text>
+    <text font-family="system-ui, sans-serif" font-size="20" font-weight="bold" fill="#5A4A42" y="90">
+      <tspan x="0" y="0" text-decoration="underline" fill="#B7AFA1">Controls PC:</tspan>
+      <tspan x="130" y="0">Arrow Keys to move, Spacebar to</tspan>
+      <tspan x="0" y="30">pause.</tspan>
+      <tspan x="80" y="30" text-decoration="underline" fill="#B7AFA1">Mobile:</tspan>
+      <tspan x="170" y="30">Swipe screen to steer.</tspan>
+    </text>
+    <text font-family="system-ui, sans-serif" font-size="20" font-weight="bold" fill="#5A4A42" y="180">
+      <tspan x="0" y="0" text-decoration="underline" fill="#B7AFA1">Streak Bonus:</tspan>
+      <tspan x="140" y="0">Consecutive correct answers</tspan>
+      <tspan x="0" y="30">increase points (+10, +20...) and grow your snake.</tspan>
+    </text>
+    <text font-family="system-ui, sans-serif" font-size="20" font-weight="bold" fill="#5A4A42" y="270">
+      <tspan x="0" y="0" text-decoration="underline" fill="#B7AFA1">Penalties:</tspan>
+      <tspan x="110" y="0">Hitting walls, yourself, or wrong</tspan>
+      <tspan x="0" y="30">words reduces score (-10, -20...) and shrinks your</tspan>
+      <tspan x="0" y="60">snake.</tspan>
+    </text>
+    <text font-family="system-ui, sans-serif" font-size="20" font-weight="bold" fill="#5A4A42" y="380">
+      <tspan x="0" y="0" text-decoration="underline" fill="#B7AFA1">Shield:</tspan>
+      <tspan x="80" y="0">Gain 1 second of invincibility after a</tspan>
+      <tspan x="0" y="30">correct eat to safely pass through walls and</tspan>
+      <tspan x="0" y="60">obstacles.</tspan>
+    </text>
+    <text font-family="system-ui, sans-serif" font-size="20" font-weight="bold" fill="#5A4A42" y="490">
+      <tspan x="0" y="0" text-decoration="underline" fill="#B7AFA1">Game Over:</tspan>
+      <tspan x="125" y="0">The game ends if time runs out or</tspan>
+      <tspan x="0" y="30">your score hits zero.</tspan>
     </text>
   </g>
 </svg>
@@ -174,6 +214,13 @@ function App() {
     finally { setIsLoading(false); }
   };
 
+  const isRangeDisabled = (range: number[]) => {
+    if (selectedLevel?.startsWith('C')) {
+      return range[0] >= 26;
+    }
+    return false;
+  };
+
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60);
     const sec = s % 60;
@@ -204,7 +251,7 @@ function App() {
 
   if (showIntro) {
     return (
-      <div className="flex flex-col h-[100dvh] w-full items-center justify-between bg-[#E8E5DA] text-ink p-8 select-none font-serif relative overflow-hidden">
+      <div className="flex flex-col h-screen w-full items-center justify-between bg-[#E8E5DA] text-ink p-8 select-none font-serif relative overflow-hidden">
         <ParticleBackground />
         {showInstructions && <InstructionModal />}
         
@@ -235,7 +282,7 @@ function App() {
   }
 
   return (
-    <div className="flex flex-col h-[100dvh] w-full font-sans touch-none select-none overflow-hidden relative bg-[#E0DDD5]">
+    <div className="flex flex-col h-screen w-full font-sans touch-none select-none overflow-hidden relative bg-[#E0DDD5]">
       {showInstructions && <InstructionModal />}
       
       {/* HEADER: FIXED TOP */}
@@ -252,17 +299,13 @@ function App() {
       <div className="flex-1 flex flex-col sm:flex-row overflow-hidden w-full relative">
         
         {/* GAME AREA: CENTERED SQUARE */}
-        <main className="flex-1 relative flex items-center justify-center p-2 sm:p-4 overflow-hidden">
-          {/* TOUCH LAYER */}
+        <main className="flex-1 relative flex items-center justify-center p-2 sm:p-4 overflow-hidden min-h-0">
           <div className="absolute inset-0 z-20 cursor-crosshair" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}></div>
-          
           <div className="relative w-full h-full flex items-center justify-center pointer-events-none z-10">
                <div className="relative aspect-square shadow-2xl rounded-2xl border-2 border-white/40 overflow-hidden bg-white/5 backdrop-blur-sm pointer-events-auto" style={{ width: '800px', height: '800px', maxWidth: '100%', maxHeight: '100%' }}>
                   <GameCanvas snake={snake} foods={foods} gridSize={GRID_SIZE} isInvincible={isInvincible} />
                </div>
           </div>
-          
-          {/* OVERLAYS */}
           {(gameState === GameState.PAUSED || gameState === GameState.GAME_OVER) && (
             <div className="absolute inset-0 bg-black/50 backdrop-blur-xl flex items-center justify-center z-50 pointer-events-auto p-4">
                 <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl text-center border border-white/50 w-full max-w-xs animate-[scaleIn_0.2s_ease-out]">
@@ -279,7 +322,6 @@ function App() {
         {/* SIDEBAR: RIGHT ON DESKTOP, BOTTOM ON MOBILE */}
         <aside className="w-full sm:w-[320px] lg:w-[380px] bg-white/80 backdrop-blur-2xl sm:border-l border-white/60 z-40 flex flex-col shadow-[-10px_0_30px_rgba(0,0,0,0.05)] shrink-0 overflow-y-auto sm:overflow-hidden">
           <div className="p-3 sm:p-8 flex flex-row sm:flex-col items-center sm:items-stretch gap-3 sm:gap-8 w-full">
-              
               <div className="bg-white rounded-2xl sm:rounded-[2rem] px-4 py-2 sm:p-8 shadow-sm border border-white flex-1 flex flex-col justify-center min-h-[70px] sm:min-h-[200px]">
                   {currentWord ? (
                       <>
@@ -292,14 +334,12 @@ function App() {
                       </>
                   ) : <div className="animate-pulse text-tan italic font-serif text-sm">Waiting...</div>}
               </div>
-              
               <div className="hidden sm:grid grid-cols-3 gap-2 p-3 bg-black/5 rounded-3xl">
                   <div /> <button className="p-4 bg-white rounded-xl shadow-sm hover:bg-olive hover:text-white transition-colors" onClick={() => updateDirection({x:0, y:-1})}>▲</button> <div />
                   <button className="p-4 bg-white rounded-xl shadow-sm hover:bg-olive hover:text-white transition-colors" onClick={() => updateDirection({x:-1, y:0})}>◀</button>
                   <button className="p-4 bg-white rounded-xl shadow-sm hover:bg-olive hover:text-white transition-colors" onClick={() => updateDirection({x:0, y:1})}>▼</button>
                   <button className="p-4 bg-white rounded-xl shadow-sm hover:bg-olive hover:text-white transition-colors" onClick={() => updateDirection({x:1, y:0})}>▶</button>
               </div>
-
               <button onClick={pauseGame} className="px-6 sm:w-full py-4 rounded-xl sm:rounded-2xl bg-tan/20 font-black text-ink uppercase tracking-widest border border-tan/30 active:scale-95 transition-all h-[70px] sm:h-auto flex items-center justify-center shrink-0">
                   {gameState === GameState.PAUSED ? '▶' : '||'}
               </button>
@@ -314,34 +354,48 @@ function App() {
       {/* SETUP MODAL */}
       {showConfig && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-2xl z-[70] flex items-center justify-center p-4">
-            <div className="bg-[#F0EDE5] rounded-[3rem] shadow-2xl max-w-md w-full p-8 border border-white/60 animate-[scaleIn_0.2s_ease-out]">
-                <h2 className="text-3xl font-serif font-black text-ink mb-8 text-center">Setup Expedition</h2>
-                <div className="space-y-6">
+            <div className="bg-[#F0EDE5] rounded-[3rem] shadow-2xl max-w-lg w-full p-8 border border-white/60 animate-[scaleIn_0.2s_ease-out] max-h-[90vh] overflow-y-auto">
+                <h2 className="text-4xl font-serif font-black text-ink mb-10 text-center">Setup Expedition</h2>
+                <div className="space-y-8">
                     <div>
-                        <label className="block text-[10px] font-black text-ink/40 uppercase mb-2 tracking-widest">Feeding Duration</label>
-                        <div className="flex gap-2">
+                        <label className="block text-[12px] font-black text-ink/40 uppercase mb-4 tracking-widest text-center">Feeding Duration</label>
+                        <div className="flex gap-3 px-4">
                             {[5, 10, 15].map(m => (
-                                <button key={m} onClick={() => setGameDuration(m)} className={`flex-1 py-3 rounded-xl border-2 font-black transition-all ${gameDuration === m ? 'bg-ink text-white border-ink' : 'border-ink/10 text-ink hover:bg-ink/5'}`}>{m}m</button>
+                                <button key={m} onClick={() => setGameDuration(m)} className={`flex-1 py-4 rounded-2xl border-2 font-black text-xl transition-all ${gameDuration === m ? 'bg-ink text-white border-ink shadow-lg' : 'bg-white/40 border-ink/5 text-ink hover:bg-white/60'}`}>{m}m</button>
                             ))}
                         </div>
                     </div>
-                    <div className="bg-white/60 p-6 rounded-[2.5rem] space-y-6 border border-tan/30 shadow-inner">
-                        <div className="flex flex-wrap gap-2 justify-center">
+                    <div className="bg-white/60 p-8 rounded-[3rem] space-y-8 border border-tan/30 shadow-inner mx-4">
+                        <div className="flex flex-wrap gap-3 justify-center">
                             {LEVELS.map(l => (
-                                <button key={l} onClick={() => setSelectedLevel(l)} className={`w-10 h-10 rounded-full font-black transition-all ${selectedLevel === l ? 'bg-olive text-white shadow-md scale-110' : 'bg-white text-olive border border-olive/10 hover:border-olive/40'}`}>{l}</button>
+                                <button key={l} onClick={() => { setSelectedLevel(l); setSelectedRange(null); }} className={`w-12 h-12 rounded-full font-black text-lg transition-all flex items-center justify-center ${selectedLevel === l ? 'bg-olive text-white shadow-xl scale-115' : 'bg-white text-olive border border-olive/10 hover:border-olive/40'}`}>{l}</button>
                             ))}
                         </div>
-                        <div className="grid grid-cols-5 gap-1.5">
-                            {UNIT_RANGES.map((r, i) => (
-                                <button key={i} onClick={() => setSelectedRange(r)} className={`text-[9px] py-2 rounded-lg border transition-all ${selectedRange === r ? 'bg-olive text-white border-olive font-black' : 'border-olive/20 text-ink hover:bg-olive/5'}`}>{r[0]}-{r[1]}</button>
-                            ))}
+                        <div className="grid grid-cols-5 gap-2">
+                            {UNIT_RANGES.map((r, i) => {
+                                const disabled = isRangeDisabled(r);
+                                return (
+                                    <button 
+                                      key={i} 
+                                      disabled={disabled}
+                                      onClick={() => setSelectedRange(r)} 
+                                      className={`text-[10px] py-3 rounded-xl border transition-all ${disabled ? 'opacity-10 cursor-not-allowed border-transparent' : selectedRange === r ? 'bg-olive text-white border-olive font-black shadow-md' : 'bg-white/40 border-olive/10 text-ink hover:bg-olive/5'}`}
+                                    >
+                                      {r[0]}-{r[1]}
+                                    </button>
+                                );
+                            })}
                         </div>
-                        <button onClick={handleLoadCSV} disabled={!selectedLevel || !selectedRange || isLoading} className="w-full bg-olive text-white py-4 rounded-xl font-black text-lg shadow-xl disabled:opacity-30 active:scale-95 transition-all border-b-4 border-black/10">
+                        <button 
+                          onClick={handleLoadCSV} 
+                          disabled={!selectedLevel || !selectedRange || isLoading} 
+                          className="w-full bg-olive text-white py-5 rounded-2xl font-black text-2xl shadow-2xl disabled:opacity-30 active:scale-95 transition-all border-b-8 border-black/10 mt-4"
+                        >
                           {isLoading ? 'Preparing...' : 'Start Hunting'}
                         </button>
                     </div>
                 </div>
-                <button onClick={() => setShowConfig(false)} className="mt-4 w-full text-xs text-ink/40 font-bold uppercase hover:text-ink transition-colors">Go Back</button>
+                <button onClick={() => setShowConfig(false)} className="mt-8 w-full text-sm text-ink/50 font-black uppercase tracking-widest hover:text-ink transition-colors block text-center">GO BACK</button>
             </div>
         </div>
       )}
