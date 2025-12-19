@@ -22,105 +22,66 @@ const LEVEL_CSVS: Record<string, string> = {
 const LEVELS = ["1", "2", "3", "4", "5", "6", "C1", "C2", "C3", "C4"];
 const UNIT_RANGES = [[1,5],[6,10],[11,15],[16,20],[21,25],[26,30],[31,35],[36,40],[41,45],[46,50]];
 
-const CN_INSTRUCTION_SVG = `data:image/svg+xml;utf8,${encodeURIComponent(`
-<svg width="600" height="800" viewBox="0 0 600 800" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" style="stop-color:#F0EDE5;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#E8E5DA;stop-opacity:1" />
-    </linearGradient>
-  </defs>
-  <rect width="100%" height="100%" fill="url(#bg)"/>
-  <circle cx="500" cy="100" r="80" fill="#FFFFFF" fill-opacity="0.4" />
-  <circle cx="550" cy="150" r="60" fill="#FFFFFF" fill-opacity="0.4" />
-  <circle cx="50" cy="700" r="100" fill="#FFFFFF" fill-opacity="0.4" />
-  <text x="40" y="100" font-family="Georgia, serif" font-size="56" font-weight="bold" fill="#7D8D70">遊戲說明</text>
-  <line x1="40" y1="125" x2="560" y2="125" stroke="#A8B7A5" stroke-width="1" />
-  <g transform="translate(40, 180)">
-    <text font-family="system-ui, sans-serif" font-size="22" font-weight="bold" fill="#5A4A42">
-      <tspan x="0" y="0" text-decoration="underline" fill="#B7AFA1">遊戲目標：</tspan>
-      <tspan x="115" y="0">控制貪吃蛇吃到與英文單字對應的中</tspan>
-      <tspan x="0" y="35">文釋義。</tspan>
-    </text>
-    <text font-family="system-ui, sans-serif" font-size="22" font-weight="bold" fill="#5A4A42" y="90">
-      <tspan x="0" y="0" text-decoration="underline" fill="#B7AFA1">操作方式：</tspan>
-      <tspan x="115" y="0">電腦： 使用方向鍵移動，空白鍵暫停。</tspan>
-      <tspan x="115" y="35">手機： 滑動螢幕控制方向。</tspan>
-    </text>
-    <text font-family="system-ui, sans-serif" font-size="22" font-weight="bold" fill="#5A4A42" y="180">
-      <tspan x="0" y="0" text-decoration="underline" fill="#B7AFA1">連勝獎勵：</tspan>
-      <tspan x="115" y="0">連續答對可獲得遞增分數 (+10, +20...) </tspan>
-      <tspan x="0" y="35">並增長蛇身。</tspan>
-    </text>
-    <text font-family="system-ui, sans-serif" font-size="22" font-weight="bold" fill="#5A4A42" y="270">
-      <tspan x="0" y="0" text-decoration="underline" fill="#B7AFA1">失誤懲罰：</tspan>
-      <tspan x="115" y="0">撞牆、撞身或吃錯字將扣分 (-10, -20...) </tspan>
-      <tspan x="0" y="35">並縮短蛇身。</tspan>
-    </text>
-    <text font-family="system-ui, sans-serif" font-size="22" font-weight="bold" fill="#5A4A42" y="360">
-      <tspan x="0" y="0" text-decoration="underline" fill="#B7AFA1">無敵護盾：</tspan>
-      <tspan x="115" y="0">答對後獲得 1 秒無敵，期間可安全穿越</tspan>
-      <tspan x="0" y="35">牆壁與障礙。</tspan>
-    </text>
-    <text font-family="system-ui, sans-serif" font-size="22" font-weight="bold" fill="#5A4A42" y="450">
-      <tspan x="0" y="0" text-decoration="underline" fill="#B7AFA1">遊戲結束：</tspan>
-      <tspan x="115" y="0">時間耗盡或分數歸零時遊戲結束。</tspan>
-    </text>
-  </g>
-</svg>
-`)}`;
+const Section = ({ title, content, isChinese }: { title: string, content: React.ReactNode, isChinese?: boolean }) => (
+  <div className="mb-5 last:mb-0">
+    <h3 className={`text-tan font-black underline mb-1.5 ${isChinese ? 'text-lg' : 'text-base uppercase tracking-wider'}`}>
+      {title}
+    </h3>
+    <div className={`font-bold leading-relaxed text-ink/90 ${isChinese ? 'text-[15px]' : 'text-[14px]'}`}>
+      {content}
+    </div>
+  </div>
+);
 
-const EN_INSTRUCTION_SVG = `data:image/svg+xml;utf8,${encodeURIComponent(`
-<svg width="600" height="800" viewBox="0 0 600 800" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" style="stop-color:#F0EDE5;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#E8E5DA;stop-opacity:1" />
-    </linearGradient>
-  </defs>
-  <rect width="100%" height="100%" fill="url(#bg)"/>
-  <circle cx="500" cy="100" r="80" fill="#FFFFFF" fill-opacity="0.4" />
-  <circle cx="50" cy="700" r="100" fill="#FFFFFF" fill-opacity="0.4" />
-  <text x="40" y="100" font-family="Georgia, serif" font-size="56" font-weight="bold" fill="#7D8D70">How to Play</text>
-  <line x1="40" y1="125" x2="560" y2="125" stroke="#A8B7A5" stroke-width="1" />
-  <g transform="translate(40, 180)">
-    <text font-family="system-ui, sans-serif" font-size="20" font-weight="bold" fill="#5A4A42">
-      <tspan x="0" y="0" text-decoration="underline" fill="#B7AFA1">Objective:</tspan>
-      <tspan x="110" y="0">Control the snake to eat the Chinese</tspan>
-      <tspan x="0" y="30">meaning that matches the English word.</tspan>
-    </text>
-    <text font-family="system-ui, sans-serif" font-size="20" font-weight="bold" fill="#5A4A42" y="90">
-      <tspan x="0" y="0" text-decoration="underline" fill="#B7AFA1">Controls PC:</tspan>
-      <tspan x="130" y="0">Arrow Keys to move, Spacebar to</tspan>
-      <tspan x="0" y="30">pause.</tspan>
-      <tspan x="80" y="30" text-decoration="underline" fill="#B7AFA1">Mobile:</tspan>
-      <tspan x="170" y="30">Swipe screen to steer.</tspan>
-    </text>
-    <text font-family="system-ui, sans-serif" font-size="20" font-weight="bold" fill="#5A4A42" y="180">
-      <tspan x="0" y="0" text-decoration="underline" fill="#B7AFA1">Streak Bonus:</tspan>
-      <tspan x="140" y="0">Consecutive correct answers</tspan>
-      <tspan x="0" y="30">increase points (+10, +20...) and grow your snake.</tspan>
-    </text>
-    <text font-family="system-ui, sans-serif" font-size="20" font-weight="bold" fill="#5A4A42" y="270">
-      <tspan x="0" y="0" text-decoration="underline" fill="#B7AFA1">Penalties:</tspan>
-      <tspan x="110" y="0">Hitting walls, yourself, or wrong</tspan>
-      <tspan x="0" y="30">words reduces score (-10, -20...) and shrinks your</tspan>
-      <tspan x="0" y="60">snake.</tspan>
-    </text>
-    <text font-family="system-ui, sans-serif" font-size="20" font-weight="bold" fill="#5A4A42" y="380">
-      <tspan x="0" y="0" text-decoration="underline" fill="#B7AFA1">Shield:</tspan>
-      <tspan x="80" y="0">Gain 1 second of invincibility after a</tspan>
-      <tspan x="0" y="30">correct eat to safely pass through walls and</tspan>
-      <tspan x="0" y="60">obstacles.</tspan>
-    </text>
-    <text font-family="system-ui, sans-serif" font-size="20" font-weight="bold" fill="#5A4A42" y="490">
-      <tspan x="0" y="0" text-decoration="underline" fill="#B7AFA1">Game Over:</tspan>
-      <tspan x="125" y="0">The game ends if time runs out or</tspan>
-      <tspan x="0" y="30">your score hits zero.</tspan>
-    </text>
-  </g>
-</svg>
-`)}`;
+const ChineseInstructions = () => (
+  <div className="flex flex-col h-full bg-[#F0EDE5] p-6 sm:p-10 select-none text-left">
+    <div className="mb-6">
+      <h2 className="text-4xl sm:text-5xl font-serif font-black text-olive mb-2">遊戲說明</h2>
+      <div className="w-full h-0.5 bg-olive/30" />
+    </div>
+    <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-1">
+      <Section isChinese title="遊戲目標：" content="控制貪吃蛇吃到與英文單字對應的中文釋義。" />
+      <Section isChinese title="操作方式：" content={
+        <div className="space-y-1">
+          <p>電腦：使用 <span className="text-olive">方向鍵</span> 移動，<span className="text-olive">空白鍵</span> 暫停。</p>
+          <p>手機：直接在 <span className="text-olive">遊戲盤面滑動</span> 控制方向。</p>
+        </div>
+      } />
+      <Section isChinese title="連勝獎勵：" content="連續答對可獲得遞增分數 (+10, +20...) 並增長蛇身。" />
+      <Section isChinese title="失誤懲罰：" content="撞牆、撞身或吃錯字將扣分 (-10, -20...) 並縮短蛇身。" />
+      <Section isChinese title="無敵護盾：" content="答對後獲得 1 秒無敵，期間可安全穿越牆壁與障礙。" />
+      <Section isChinese title="遊戲結束：" content="時間耗盡或分數歸零時遊戲結束。" />
+    </div>
+    <div className="mt-4 text-center text-olive/50 text-[10px] font-black uppercase tracking-[0.2em] animate-pulse">
+      點擊翻轉查看英文版
+    </div>
+  </div>
+);
+
+const EnglishInstructions = () => (
+  <div className="flex flex-col h-full bg-[#F0EDE5] p-6 sm:p-10 select-none text-left">
+    <div className="mb-6">
+      <h2 className="text-4xl sm:text-5xl font-serif font-black text-olive mb-2">How to Play</h2>
+      <div className="w-full h-0.5 bg-olive/30" />
+    </div>
+    <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-1">
+      <Section title="Objective:" content="Control the snake to eat the Chinese meaning that matches the English word." />
+      <Section title="Controls:" content={
+        <div className="space-y-1">
+          <p><span className="text-tan">PC:</span> Arrow Keys to move, Spacebar to pause.</p>
+          <p><span className="text-tan">Mobile:</span> Swipe anywhere on screen to steer.</p>
+        </div>
+      } />
+      <Section title="Streak Bonus:" content="Consecutive correct answers increase points (+10, +20...) and grow your snake." />
+      <Section title="Penalties:" content="Hitting walls, yourself, or wrong words reduces score (-10, -20...) and shrinks your snake." />
+      <Section title="Shield:" content="Gain 1 second of invincibility after a correct eat to safely pass through walls and obstacles." />
+      <Section title="Game Over:" content="The game ends if time runs out or your score hits zero." />
+    </div>
+    <div className="mt-4 text-center text-olive/50 text-[10px] font-black uppercase tracking-[0.2em] animate-pulse">
+      Click to view Chinese version
+    </div>
+  </div>
+);
 
 function App() {
   const [isMuted, setIsMuted] = useState(false);
@@ -229,13 +190,13 @@ function App() {
 
   const InstructionModal = () => (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-lg z-[100] flex items-center justify-center p-4 sm:p-8" onClick={() => setShowInstructions(false)}>
-      <div className="relative w-full max-w-lg aspect-[3/4] cursor-pointer" style={{ perspective: '2000px' }} onClick={(e) => { e.stopPropagation(); setIsFlipped(!isFlipped); }}>
-        <div className="relative w-full h-full transition-transform duration-700 shadow-2xl rounded-3xl" style={{ transformStyle: 'preserve-3d', transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }}>
-          <div className="absolute inset-0 rounded-3xl overflow-hidden bg-[#F0EDE5]" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
-            <img src={CN_INSTRUCTION_SVG} alt="Instructions (CN)" className="w-full h-full object-fill" />
+      <div className="relative w-full max-w-lg aspect-[3/4.8] sm:aspect-[3/4.2] cursor-pointer" style={{ perspective: '2000px' }} onClick={(e) => { e.stopPropagation(); setIsFlipped(!isFlipped); }}>
+        <div className="relative w-full h-full transition-transform duration-700 shadow-2xl rounded-[2.5rem]" style={{ transformStyle: 'preserve-3d', transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }}>
+          <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden shadow-inner border border-white/20" style={{ backfaceVisibility: 'hidden' }}>
+            <ChineseInstructions />
           </div>
-          <div className="absolute inset-0 rounded-3xl overflow-hidden bg-[#F0EDE5]" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
-            <img src={EN_INSTRUCTION_SVG} alt="Instructions (EN)" className="w-full h-full object-fill" />
+          <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden shadow-inner border border-white/20" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
+            <EnglishInstructions />
           </div>
         </div>
       </div>
@@ -285,7 +246,7 @@ function App() {
     <div className="flex flex-col h-[100dvh] w-full font-sans touch-none select-none overflow-hidden relative bg-[#E0DDD5]">
       {showInstructions && <InstructionModal />}
       
-      {/* HEADER: FIXED TOP */}
+      {/* HEADER */}
       <header className="w-full px-4 py-3 flex justify-between items-center z-30 shrink-0 bg-[#E0DDD5]/70 backdrop-blur-md border-b border-black/5">
           <div className="bg-white/50 backdrop-blur-md px-4 py-1.5 rounded-full shadow-md border border-white/40 flex gap-4">
              <div><span className="text-[9px] uppercase text-ink/60 font-black block leading-none mb-1">Score</span><span className="text-lg font-bold text-ink leading-none">{score}</span></div>
@@ -295,101 +256,90 @@ function App() {
           <UtilityButtons />
       </header>
 
-      {/* MOBILE TARGET WORD: ALWAYS VISIBLE UNDER HEADER ON SMALL SCREENS */}
-      <div className="sm:hidden w-full px-4 py-2 z-30 bg-[#E0DDD5]/50 backdrop-blur-sm border-b border-black/5 flex justify-center">
-          <div className="bg-white/90 shadow-sm border border-white px-6 py-2 rounded-2xl flex flex-col items-center min-w-[150px]">
-              <span className="text-[9px] uppercase font-black text-olive tracking-widest leading-none mb-1">Target Word</span>
-              <span className="text-2xl font-serif font-black text-ink">{currentWord?.word || '...'}</span>
-              <span className="text-[10px] font-bold text-olive/70">{currentWord?.pos}</span>
+      {/* MOBILE CUE WORD CARD */}
+      <div className="sm:hidden w-full px-4 py-3 z-30 bg-[#E0DDD5]/95 backdrop-blur-xl border-b border-black/10 flex justify-center sticky top-0 shadow-sm">
+          <div className="bg-white shadow-xl border-2 border-olive/20 px-10 py-4 rounded-[2rem] flex flex-col items-center w-full max-w-xs transform transition-all animate-[slideDown_0.3s_ease-out]">
+              <span className="text-[11px] uppercase font-black text-olive tracking-[0.3em] leading-none mb-2 opacity-60">Target Word</span>
+              <span className="text-4xl font-serif font-black text-ink">{currentWord?.word || '...'}</span>
+              <div className="mt-2 flex items-center gap-2">
+                 <span className="text-[12px] font-black text-olive/90 bg-olive/10 px-3 py-1 rounded-lg border border-olive/20 uppercase tracking-tighter">{currentWord?.pos}</span>
+              </div>
           </div>
       </div>
 
-      {/* BODY: RESPONSIVE SPLIT */}
       <div className="flex-1 flex flex-col sm:flex-row overflow-hidden w-full relative">
-        
-        {/* GAME AREA: CENTERED SQUARE */}
-        <main className="flex-1 relative flex items-center justify-center p-2 sm:p-4 overflow-hidden min-h-0">
+        <main className="flex-1 relative flex items-center justify-center p-2 sm:p-6 overflow-hidden min-h-0">
           {/* TOUCH LAYER */}
-          <div className="absolute inset-0 z-20 cursor-crosshair" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}></div>
+          <div className="absolute inset-0 z-20" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}></div>
           
           <div className="relative w-full h-full flex items-center justify-center pointer-events-none z-10">
-               <div className="relative aspect-square shadow-2xl rounded-2xl border-2 border-white/40 overflow-hidden bg-white/5 backdrop-blur-sm pointer-events-auto" style={{ width: '800px', height: '800px', maxWidth: '100%', maxHeight: '100%' }}>
+               <div className="relative aspect-square shadow-2xl rounded-[2.5rem] border-4 border-white/50 overflow-hidden bg-white/10 backdrop-blur-md pointer-events-auto" style={{ width: '800px', height: '800px', maxWidth: '100%', maxHeight: '100%' }}>
                   <GameCanvas snake={snake} foods={foods} gridSize={GRID_SIZE} isInvincible={isInvincible} />
                </div>
           </div>
-          
-          {/* OVERLAYS */}
+
           {(gameState === GameState.PAUSED || gameState === GameState.GAME_OVER) && (
             <div className="absolute inset-0 bg-black/50 backdrop-blur-xl flex items-center justify-center z-50 pointer-events-auto p-4">
-                <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl text-center border border-white/50 w-full max-w-xs animate-[scaleIn_0.2s_ease-out]">
-                  <h2 className="text-3xl font-serif font-black mb-4 text-ink">{gameState === GameState.GAME_OVER ? 'Expedition End' : 'Expedition Paused'}</h2>
-                  <div className="text-xl mb-8">Score: <span className="font-bold text-olive">{score}</span></div>
-                  <button onClick={() => gameState === GameState.GAME_OVER ? setShowConfig(true) : pauseGame()} className="bg-olive text-white w-full py-4 rounded-xl font-bold text-lg shadow-lg active:scale-95 transition-all">
-                    {gameState === GameState.GAME_OVER ? 'New Goal' : 'Continue'}
+                <div className="bg-white p-8 rounded-[3rem] shadow-2xl text-center border-4 border-white/50 w-full max-w-xs animate-[scaleIn_0.2s_ease-out]">
+                  <h2 className="text-4xl font-serif font-black mb-4 text-ink">{gameState === GameState.GAME_OVER ? 'Game Over' : 'Paused'}</h2>
+                  <div className="text-2xl mb-8 font-black text-olive">Score: {score}</div>
+                  <button onClick={() => gameState === GameState.GAME_OVER ? setShowConfig(true) : pauseGame()} className="bg-olive text-white w-full py-5 rounded-2xl font-black text-xl shadow-2xl active:scale-95 transition-all border-b-4 border-black/10">
+                    {gameState === GameState.GAME_OVER ? 'New Mission' : 'Resume'}
                   </button>
                 </div>
             </div>
           )}
         </main>
 
-        {/* SIDEBAR: RIGHT ON DESKTOP, BOTTOM CONTROLS ON MOBILE */}
-        <aside className="w-full sm:w-[320px] lg:w-[380px] bg-white/80 backdrop-blur-2xl sm:border-l border-white/60 z-40 flex flex-col shadow-[-10px_0_30px_rgba(0,0,0,0.05)] shrink-0 sm:overflow-hidden">
-          <div className="p-3 sm:p-8 flex flex-row sm:flex-col items-center sm:items-stretch gap-3 sm:gap-8 w-full">
+        <aside className="w-full sm:w-[320px] lg:w-[380px] bg-white/80 backdrop-blur-2xl sm:border-l-2 border-white/60 z-40 flex flex-col shadow-[-10px_0_40px_rgba(0,0,0,0.05)] shrink-0 sm:overflow-hidden">
+          <div className="p-4 sm:p-10 flex flex-row sm:flex-col items-center sm:items-stretch gap-4 sm:gap-10 w-full">
               
-              {/* Desktop Target Word Card (Hidden on Mobile as it is now at top) */}
-              <div className="hidden sm:flex bg-white rounded-2xl sm:rounded-[2rem] px-4 py-2 sm:p-8 shadow-sm border border-white flex-1 flex-col justify-center min-h-[70px] sm:min-h-[200px]">
+              <div className="hidden sm:flex bg-white rounded-[2.5rem] p-10 shadow-inner border border-olive/10 flex-1 flex-col justify-center min-h-[240px]">
                   {currentWord ? (
                       <>
-                          <div className="text-[10px] font-black text-olive uppercase mb-2 tracking-widest opacity-60">Target Vocabulary</div>
-                          <div className="text-xl sm:text-4xl font-serif font-black text-ink leading-tight">{currentWord.word}</div>
-                          <div className="flex items-center gap-2 mt-1 sm:mt-3">
-                            <span className="text-[10px] sm:text-xs font-bold text-olive/80 bg-olive/10 px-2 py-0.5 rounded-md border border-olive/10">{currentWord.pos}</span>
+                          <div className="text-[11px] font-black text-olive/50 uppercase mb-4 tracking-widest">Active Word</div>
+                          <div className="text-5xl font-serif font-black text-ink leading-tight mb-2">{currentWord.word}</div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-black text-olive/80 bg-olive/10 px-3 py-1 rounded-lg border border-olive/20 uppercase tracking-widest">{currentWord.pos}</span>
                           </div>
                       </>
-                  ) : <div className="animate-pulse text-tan italic font-serif text-sm">Preparing...</div>}
+                  ) : <div className="animate-pulse text-tan italic font-serif text-lg">Initializing...</div>}
               </div>
               
-              {/* PC Arrow Keys Visualization (Desktop Only) */}
-              <div className="hidden sm:grid grid-cols-3 gap-2 p-3 bg-black/5 rounded-3xl">
-                  <div /> <button className="p-4 bg-white rounded-xl shadow-sm hover:bg-olive hover:text-white transition-colors" onClick={() => updateDirection({x:0, y:-1})}>▲</button> <div />
-                  <button className="p-4 bg-white rounded-xl shadow-sm hover:bg-olive hover:text-white transition-colors" onClick={() => updateDirection({x:-1, y:0})}>◀</button>
-                  <button className="p-4 bg-white rounded-xl shadow-sm hover:bg-olive hover:text-white transition-colors" onClick={() => updateDirection({x:0, y:1})}>▼</button>
-                  <button className="p-4 bg-white rounded-xl shadow-sm hover:bg-olive hover:text-white transition-colors" onClick={() => updateDirection({x:1, y:0})}>▶</button>
+              <div className="hidden sm:grid grid-cols-3 gap-3 p-4 bg-black/5 rounded-[2rem]">
+                  <div /> <button className="p-5 bg-white rounded-2xl shadow-md hover:bg-olive hover:text-white active:scale-90 transition-all text-xl" onClick={() => updateDirection({x:0, y:-1})}>▲</button> <div />
+                  <button className="p-5 bg-white rounded-2xl shadow-md hover:bg-olive hover:text-white active:scale-90 transition-all text-xl" onClick={() => updateDirection({x:-1, y:0})}>◀</button>
+                  <button className="p-5 bg-white rounded-2xl shadow-md hover:bg-olive hover:text-white active:scale-90 transition-all text-xl" onClick={() => updateDirection({x:0, y:1})}>▼</button>
+                  <button className="p-5 bg-white rounded-2xl shadow-md hover:bg-olive hover:text-white active:scale-90 transition-all text-xl" onClick={() => updateDirection({x:1, y:0})}>▶</button>
               </div>
 
-              {/* Pause/Action Button */}
-              <button onClick={pauseGame} className="flex-1 sm:w-full py-4 rounded-xl sm:rounded-2xl bg-tan/20 font-black text-ink uppercase tracking-widest border border-tan/30 active:scale-95 transition-all flex items-center justify-center">
-                  {gameState === GameState.PAUSED ? 'Resume ▶' : 'Pause ||'}
+              <button onClick={pauseGame} className="flex-1 sm:w-full py-5 rounded-2xl bg-tan/10 font-black text-ink uppercase tracking-[0.2em] border-2 border-tan/20 active:scale-95 transition-all flex items-center justify-center text-sm">
+                  {gameState === GameState.PAUSED ? 'RESUME ▶' : 'PAUSE ||'}
               </button>
-          </div>
-          <div className="hidden sm:block mt-auto p-8 border-t border-black/5">
-               <p className="text-[10px] text-ink/40 uppercase font-black tracking-widest">Mobile Controls</p>
-               <p className="text-xs text-ink/60 mt-1 italic leading-relaxed">Swipe directly on the game board to steer your snake.</p>
           </div>
         </aside>
       </div>
 
-      {/* SETUP MODAL */}
       {showConfig && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-2xl z-[70] flex items-center justify-center p-4">
-            <div className="bg-[#F0EDE5] rounded-[3rem] shadow-2xl max-w-lg w-full p-8 border border-white/60 animate-[scaleIn_0.2s_ease-out] max-h-[90vh] overflow-y-auto">
-                <h2 className="text-4xl font-serif font-black text-ink mb-10 text-center">Setup Expedition</h2>
-                <div className="space-y-8">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-2xl z-[70] flex items-center justify-center p-4 overflow-y-auto">
+            <div className="bg-[#F0EDE5] rounded-[3.5rem] shadow-2xl max-w-lg w-full p-10 border border-white/60 animate-[scaleIn_0.2s_ease-out] my-auto">
+                <h2 className="text-4xl font-serif font-black text-ink mb-12 text-center">Expedition Setup</h2>
+                <div className="space-y-10">
                     <div>
-                        <label className="block text-[12px] font-black text-ink/40 uppercase mb-4 tracking-widest text-center">Feeding Duration</label>
-                        <div className="flex gap-3 px-4">
+                        <label className="block text-[12px] font-black text-ink/40 uppercase mb-5 tracking-[0.3em] text-center">Time Limit</label>
+                        <div className="flex gap-4 px-2">
                             {[5, 10, 15].map(m => (
-                                <button key={m} onClick={() => setGameDuration(m)} className={`flex-1 py-4 rounded-2xl border-2 font-black text-xl transition-all ${gameDuration === m ? 'bg-ink text-white border-ink shadow-lg' : 'bg-white/40 border-ink/5 text-ink hover:bg-white/60'}`}>{m}m</button>
+                                <button key={m} onClick={() => setGameDuration(m)} className={`flex-1 py-5 rounded-3xl border-2 font-black text-2xl transition-all ${gameDuration === m ? 'bg-ink text-white border-ink shadow-2xl scale-105' : 'bg-white/50 border-ink/5 text-ink hover:bg-white/80'}`}>{m}m</button>
                             ))}
                         </div>
                     </div>
-                    <div className="bg-white/60 p-8 rounded-[3rem] space-y-8 border border-tan/30 shadow-inner mx-4">
+                    <div className="bg-white/40 p-8 rounded-[3.5rem] space-y-8 border-2 border-tan/20 shadow-inner">
                         <div className="flex flex-wrap gap-3 justify-center">
                             {LEVELS.map(l => (
-                                <button key={l} onClick={() => { setSelectedLevel(l); setSelectedRange(null); }} className={`w-12 h-12 rounded-full font-black text-lg transition-all flex items-center justify-center ${selectedLevel === l ? 'bg-olive text-white shadow-xl scale-115' : 'bg-white text-olive border border-olive/10 hover:border-olive/40'}`}>{l}</button>
+                                <button key={l} onClick={() => { setSelectedLevel(l); setSelectedRange(null); }} className={`w-12 h-12 rounded-full font-black text-lg transition-all flex items-center justify-center ${selectedLevel === l ? 'bg-olive text-white shadow-2xl scale-125' : 'bg-white text-olive border-2 border-olive/10 hover:border-olive/40'}`}>{l}</button>
                             ))}
                         </div>
-                        <div className="grid grid-cols-5 gap-2">
+                        <div className="grid grid-cols-5 gap-3">
                             {UNIT_RANGES.map((r, i) => {
                                 const disabled = isRangeDisabled(r);
                                 return (
@@ -397,9 +347,9 @@ function App() {
                                       key={i} 
                                       disabled={disabled}
                                       onClick={() => setSelectedRange(r)} 
-                                      className={`text-[10px] py-3 rounded-xl border transition-all ${disabled ? 'opacity-10 cursor-not-allowed border-transparent bg-gray-200' : selectedRange === r ? 'bg-olive text-white border-olive font-black shadow-md' : 'bg-white/40 border-olive/10 text-ink hover:bg-olive/5'}`}
+                                      className={`text-[11px] py-4 rounded-2xl border-2 transition-all font-black ${disabled ? 'opacity-5 cursor-not-allowed' : selectedRange === r ? 'bg-olive text-white border-olive shadow-xl scale-110' : 'bg-white border-olive/10 text-ink hover:bg-olive/10 shadow-sm'}`}
                                     >
-                                      {r[0]}-{r[1]}
+                                      {r[0]}<br/>{r[1]}
                                     </button>
                                 );
                             })}
@@ -407,16 +357,37 @@ function App() {
                         <button 
                           onClick={handleLoadCSV} 
                           disabled={!selectedLevel || !selectedRange || isLoading} 
-                          className="w-full bg-olive text-white py-5 rounded-2xl font-black text-2xl shadow-2xl disabled:opacity-30 active:scale-95 transition-all border-b-8 border-black/10 mt-4"
+                          className="w-full bg-olive text-white py-6 rounded-3xl font-black text-3xl shadow-2xl disabled:opacity-20 active:scale-95 transition-all border-b-[10px] border-black/10 mt-4"
                         >
-                          {isLoading ? 'Preparing...' : 'Start Hunting'}
+                          {isLoading ? 'SYNCING...' : 'START HUNT'}
                         </button>
                     </div>
                 </div>
-                <button onClick={() => setShowConfig(false)} className="mt-8 w-full text-sm text-ink/50 font-black uppercase tracking-widest hover:text-ink transition-colors block text-center">GO BACK</button>
+                <button onClick={() => setShowConfig(false)} className="mt-10 w-full text-xs text-ink/40 font-black uppercase tracking-[0.5em] hover:text-ink transition-colors block text-center">GO BACK</button>
             </div>
         </div>
       )}
+
+      <style>{`
+        @keyframes slideDown {
+          from { transform: translateY(-30px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes scaleIn {
+          from { transform: scale(0.9); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 5px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(168, 183, 165, 0.4);
+          border-radius: 10px;
+        }
+      `}</style>
     </div>
   );
 }

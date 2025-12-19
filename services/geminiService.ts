@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { WordItem } from "../types";
 
@@ -6,7 +7,8 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 export const generateWordsWithGemini = async (topic: string, count: number = 20): Promise<WordItem[]> => {
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      // Use the recommended model for basic text tasks
+      model: "gemini-3-flash-preview",
       contents: `Generate a list of ${count} diverse English vocabulary words related to the topic "${topic}". 
       Include the part of speech (POS) and the Traditional Chinese meaning.`,
       config: {

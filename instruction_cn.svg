@@ -1,3 +1,4 @@
+
 <svg width="600" height="800" viewBox="0 0 600 800" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -6,48 +7,22 @@
     </linearGradient>
   </defs>
   <rect width="100%" height="100%" fill="url(#bg)"/>
-  <!-- Decorative Clouds -->
-  <circle cx="500" cy="100" r="80" fill="#FFFFFF" fill-opacity="0.4" />
-  <circle cx="550" cy="150" r="60" fill="#FFFFFF" fill-opacity="0.4" />
-  <circle cx="50" cy="700" r="100" fill="#FFFFFF" fill-opacity="0.4" />
-  
   <text x="40" y="100" font-family="Georgia, serif" font-size="56" font-weight="bold" fill="#7D8D70">遊戲說明</text>
-  <line x1="40" y1="125" x2="560" y2="125" stroke="#A8B7A5" stroke-width="1" />
+  <line x1="40" y1="125" x2="560" y2="125" stroke="#A8B7A5" stroke-width="2" />
 
-  <g transform="translate(40, 180)">
-    <text font-family="system-ui, sans-serif" font-size="22" font-weight="bold" fill="#5A4A42">
-      <tspan x="0" y="0" text-decoration="underline" fill="#B7AFA1">遊戲目標：</tspan>
-      <tspan x="115" y="0">控制貪吃蛇吃到與英文單字對應的中</tspan>
-      <tspan x="0" y="35">文釋義。</tspan>
-    </text>
+  <g font-family="system-ui, sans-serif" font-size="22" font-weight="bold" fill="#5A4A42">
+    <text x="40" y="200" text-decoration="underline" fill="#B7AFA1">遊戲目標：</text>
+    <text x="155" y="200">控制貪吃蛇吃到與英文單字對應的中</text>
+    <text x="155" y="235">文釋義。</text>
 
-    <text font-family="system-ui, sans-serif" font-size="22" font-weight="bold" fill="#5A4A42" y="90">
-      <tspan x="0" y="0" text-decoration="underline" fill="#B7AFA1">操作方式：</tspan>
-      <tspan x="115" y="0">電腦： 使用方向鍵移動，空白鍵暫停。</tspan>
-      <tspan x="115" y="35">手機： 滑動螢幕控制方向。</tspan>
-    </text>
+    <text x="40" y="300" text-decoration="underline" fill="#B7AFA1">操作方式：</text>
+    <text x="155" y="300">電腦： 使用方向鍵移動，空白鍵暫停。</text>
+    <text x="155" y="335">手機： 滑動螢幕控制方向。</text>
 
-    <text font-family="system-ui, sans-serif" font-size="22" font-weight="bold" fill="#5A4A42" y="180">
-      <tspan x="0" y="0" text-decoration="underline" fill="#B7AFA1">連勝獎勵：</tspan>
-      <tspan x="115" y="0">連續答對可獲得遞增分數 (+10, +20...) </tspan>
-      <tspan x="0" y="35">並增長蛇身。</tspan>
-    </text>
+    <text x="40" y="400" text-decoration="underline" fill="#B7AFA1">連勝獎勵：</text>
+    <text x="155" y="400">連續答對可獲得遞增分數 (+10, +20...) </text>
+    <text x="155" y="435">並增長蛇身。</text>
 
-    <text font-family="system-ui, sans-serif" font-size="22" font-weight="bold" fill="#5A4A42" y="270">
-      <tspan x="0" y="0" text-decoration="underline" fill="#B7AFA1">失誤懲罰：</tspan>
-      <tspan x="115" y="0">撞牆、撞身或吃錯字將扣分 (-10, -20...) </tspan>
-      <tspan x="0" y="35">並縮短蛇身。</tspan>
-    </text>
-
-    <text font-family="system-ui, sans-serif" font-size="22" font-weight="bold" fill="#5A4A42" y="360">
-      <tspan x="0" y="0" text-decoration="underline" fill="#B7AFA1">無敵護盾：</tspan>
-      <tspan x="115" y="0">答對後獲得 1 秒無敵，期間可安全穿越</tspan>
-      <tspan x="0" y="35">牆壁與障礙。</tspan>
-    </text>
-
-    <text font-family="system-ui, sans-serif" font-size="22" font-weight="bold" fill="#5A4A42" y="450">
-      <tspan x="0" y="0" text-decoration="underline" fill="#B7AFA1">遊戲結束：</tspan>
-      <tspan x="115" y="0">時間耗盡或分數歸零時遊戲結束。</tspan>
-    </text>
-  </g>
-</svg>
+    <text x="40" y="500" text-decoration="underline" fill="#B7AFA1">失誤懲罰：</text>
+    <text x="155" y="500">撞牆、撞身或吃錯字將扣分 (-10, -20...) </text>
+    
