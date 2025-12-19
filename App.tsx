@@ -251,7 +251,7 @@ function App() {
 
   if (showIntro) {
     return (
-      <div className="flex flex-col h-screen w-full items-center justify-between bg-[#E8E5DA] text-ink p-8 select-none font-serif relative overflow-hidden">
+      <div className="flex flex-col h-[100dvh] w-full items-center justify-between bg-[#E8E5DA] text-ink p-8 select-none font-serif relative overflow-hidden">
         <ParticleBackground />
         {showInstructions && <InstructionModal />}
         
@@ -282,7 +282,7 @@ function App() {
   }
 
   return (
-    <div className="flex flex-col h-screen w-full font-sans touch-none select-none overflow-hidden relative bg-[#E0DDD5]">
+    <div className="flex flex-col h-[100dvh] w-full font-sans touch-none select-none overflow-hidden relative bg-[#E0DDD5]">
       {showInstructions && <InstructionModal />}
       
       {/* HEADER: FIXED TOP */}
@@ -295,17 +295,30 @@ function App() {
           <UtilityButtons />
       </header>
 
+      {/* MOBILE TARGET WORD: ALWAYS VISIBLE UNDER HEADER ON SMALL SCREENS */}
+      <div className="sm:hidden w-full px-4 py-2 z-30 bg-[#E0DDD5]/50 backdrop-blur-sm border-b border-black/5 flex justify-center">
+          <div className="bg-white/90 shadow-sm border border-white px-6 py-2 rounded-2xl flex flex-col items-center min-w-[150px]">
+              <span className="text-[9px] uppercase font-black text-olive tracking-widest leading-none mb-1">Target Word</span>
+              <span className="text-2xl font-serif font-black text-ink">{currentWord?.word || '...'}</span>
+              <span className="text-[10px] font-bold text-olive/70">{currentWord?.pos}</span>
+          </div>
+      </div>
+
       {/* BODY: RESPONSIVE SPLIT */}
       <div className="flex-1 flex flex-col sm:flex-row overflow-hidden w-full relative">
         
         {/* GAME AREA: CENTERED SQUARE */}
         <main className="flex-1 relative flex items-center justify-center p-2 sm:p-4 overflow-hidden min-h-0">
+          {/* TOUCH LAYER */}
           <div className="absolute inset-0 z-20 cursor-crosshair" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}></div>
+          
           <div className="relative w-full h-full flex items-center justify-center pointer-events-none z-10">
                <div className="relative aspect-square shadow-2xl rounded-2xl border-2 border-white/40 overflow-hidden bg-white/5 backdrop-blur-sm pointer-events-auto" style={{ width: '800px', height: '800px', maxWidth: '100%', maxHeight: '100%' }}>
                   <GameCanvas snake={snake} foods={foods} gridSize={GRID_SIZE} isInvincible={isInvincible} />
                </div>
           </div>
+          
+          {/* OVERLAYS */}
           {(gameState === GameState.PAUSED || gameState === GameState.GAME_OVER) && (
             <div className="absolute inset-0 bg-black/50 backdrop-blur-xl flex items-center justify-center z-50 pointer-events-auto p-4">
                 <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl text-center border border-white/50 w-full max-w-xs animate-[scaleIn_0.2s_ease-out]">
@@ -319,34 +332,39 @@ function App() {
           )}
         </main>
 
-        {/* SIDEBAR: RIGHT ON DESKTOP, BOTTOM ON MOBILE */}
-        <aside className="w-full sm:w-[320px] lg:w-[380px] bg-white/80 backdrop-blur-2xl sm:border-l border-white/60 z-40 flex flex-col shadow-[-10px_0_30px_rgba(0,0,0,0.05)] shrink-0 overflow-y-auto sm:overflow-hidden">
+        {/* SIDEBAR: RIGHT ON DESKTOP, BOTTOM CONTROLS ON MOBILE */}
+        <aside className="w-full sm:w-[320px] lg:w-[380px] bg-white/80 backdrop-blur-2xl sm:border-l border-white/60 z-40 flex flex-col shadow-[-10px_0_30px_rgba(0,0,0,0.05)] shrink-0 sm:overflow-hidden">
           <div className="p-3 sm:p-8 flex flex-row sm:flex-col items-center sm:items-stretch gap-3 sm:gap-8 w-full">
-              <div className="bg-white rounded-2xl sm:rounded-[2rem] px-4 py-2 sm:p-8 shadow-sm border border-white flex-1 flex flex-col justify-center min-h-[70px] sm:min-h-[200px]">
+              
+              {/* Desktop Target Word Card (Hidden on Mobile as it is now at top) */}
+              <div className="hidden sm:flex bg-white rounded-2xl sm:rounded-[2rem] px-4 py-2 sm:p-8 shadow-sm border border-white flex-1 flex-col justify-center min-h-[70px] sm:min-h-[200px]">
                   {currentWord ? (
                       <>
-                          <div className="hidden sm:block text-[10px] font-black text-olive uppercase mb-2 tracking-widest opacity-60">Target Vocabulary</div>
+                          <div className="text-[10px] font-black text-olive uppercase mb-2 tracking-widest opacity-60">Target Vocabulary</div>
                           <div className="text-xl sm:text-4xl font-serif font-black text-ink leading-tight">{currentWord.word}</div>
                           <div className="flex items-center gap-2 mt-1 sm:mt-3">
                             <span className="text-[10px] sm:text-xs font-bold text-olive/80 bg-olive/10 px-2 py-0.5 rounded-md border border-olive/10">{currentWord.pos}</span>
-                            <span className="sm:hidden text-[9px] uppercase font-bold text-ink/40 tracking-tighter">Current hunt</span>
                           </div>
                       </>
-                  ) : <div className="animate-pulse text-tan italic font-serif text-sm">Waiting...</div>}
+                  ) : <div className="animate-pulse text-tan italic font-serif text-sm">Preparing...</div>}
               </div>
+              
+              {/* PC Arrow Keys Visualization (Desktop Only) */}
               <div className="hidden sm:grid grid-cols-3 gap-2 p-3 bg-black/5 rounded-3xl">
                   <div /> <button className="p-4 bg-white rounded-xl shadow-sm hover:bg-olive hover:text-white transition-colors" onClick={() => updateDirection({x:0, y:-1})}>▲</button> <div />
                   <button className="p-4 bg-white rounded-xl shadow-sm hover:bg-olive hover:text-white transition-colors" onClick={() => updateDirection({x:-1, y:0})}>◀</button>
                   <button className="p-4 bg-white rounded-xl shadow-sm hover:bg-olive hover:text-white transition-colors" onClick={() => updateDirection({x:0, y:1})}>▼</button>
                   <button className="p-4 bg-white rounded-xl shadow-sm hover:bg-olive hover:text-white transition-colors" onClick={() => updateDirection({x:1, y:0})}>▶</button>
               </div>
-              <button onClick={pauseGame} className="px-6 sm:w-full py-4 rounded-xl sm:rounded-2xl bg-tan/20 font-black text-ink uppercase tracking-widest border border-tan/30 active:scale-95 transition-all h-[70px] sm:h-auto flex items-center justify-center shrink-0">
-                  {gameState === GameState.PAUSED ? '▶' : '||'}
+
+              {/* Pause/Action Button */}
+              <button onClick={pauseGame} className="flex-1 sm:w-full py-4 rounded-xl sm:rounded-2xl bg-tan/20 font-black text-ink uppercase tracking-widest border border-tan/30 active:scale-95 transition-all flex items-center justify-center">
+                  {gameState === GameState.PAUSED ? 'Resume ▶' : 'Pause ||'}
               </button>
           </div>
           <div className="hidden sm:block mt-auto p-8 border-t border-black/5">
-               <p className="text-[10px] text-ink/40 uppercase font-black tracking-widest">Instructions</p>
-               <p className="text-xs text-ink/60 mt-1 italic leading-relaxed">Eat matching Chinese meanings. Correct hits grant 1s invincibility. Don't hit walls!</p>
+               <p className="text-[10px] text-ink/40 uppercase font-black tracking-widest">Mobile Controls</p>
+               <p className="text-xs text-ink/60 mt-1 italic leading-relaxed">Swipe directly on the game board to steer your snake.</p>
           </div>
         </aside>
       </div>
@@ -379,7 +397,7 @@ function App() {
                                       key={i} 
                                       disabled={disabled}
                                       onClick={() => setSelectedRange(r)} 
-                                      className={`text-[10px] py-3 rounded-xl border transition-all ${disabled ? 'opacity-10 cursor-not-allowed border-transparent' : selectedRange === r ? 'bg-olive text-white border-olive font-black shadow-md' : 'bg-white/40 border-olive/10 text-ink hover:bg-olive/5'}`}
+                                      className={`text-[10px] py-3 rounded-xl border transition-all ${disabled ? 'opacity-10 cursor-not-allowed border-transparent bg-gray-200' : selectedRange === r ? 'bg-olive text-white border-olive font-black shadow-md' : 'bg-white/40 border-olive/10 text-ink hover:bg-olive/5'}`}
                                     >
                                       {r[0]}-{r[1]}
                                     </button>
